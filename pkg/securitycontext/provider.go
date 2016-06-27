@@ -52,7 +52,7 @@ func (p SimpleSecurityContextProvider) ModifyContainerConfig(pod *api.Pod, conta
 // security options, whether the container is privileged, volume binds, etc.
 func (p SimpleSecurityContextProvider) ModifyHostConfig(pod *api.Pod, container *api.Container, hostConfig *dockercontainer.HostConfig, supplementalGids []int64) {
 	// Apply supplemental groups
-	if container.Name != leaky.PodInfraContainerName && pod.Spec.SecurityContext != nil {
+	if container.Name != leaky.PodInfraContainerName {
 		// TODO: We skip application of supplemental groups to the
 		// infra container to work around a runc issue which
 		// requires containers to have the '/etc/group'. For
@@ -60,15 +60,17 @@ func (p SimpleSecurityContextProvider) ModifyHostConfig(pod *api.Pod, container 
 		// https://github.com/opencontainers/runc/pull/313
 		// This can be removed once the fix makes it into the
 		// required version of docker.
-		for _, group := range pod.Spec.SecurityContext.SupplementalGroups {
-			hostConfig.GroupAdd = append(hostConfig.GroupAdd, strconv.Itoa(int(group)))
+		if pod.Spec.SecurityContext != nil {
+			for _, group := range pod.Spec.SecurityContext.SupplementalGroups {
+				hostConfig.GroupAdd = append(hostConfig.GroupAdd, strconv.Itoa(int(group)))
+			}
 		}
 
 		for _, group := range supplementalGids {
 			hostConfig.GroupAdd = append(hostConfig.GroupAdd, strconv.Itoa(int(group)))
 		}
 
-		if pod.Spec.SecurityContext.FSGroup != nil {
+		if pod.Spec.SecurityContext != nil && pod.Spec.SecurityContext.FSGroup != nil {
 			hostConfig.GroupAdd = append(hostConfig.GroupAdd, strconv.Itoa(int(*pod.Spec.SecurityContext.FSGroup)))
 		}
 	}

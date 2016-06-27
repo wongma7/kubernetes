@@ -54,7 +54,7 @@ import (
 	"k8s.io/kubernetes/pkg/kubelet/types"
 	"k8s.io/kubernetes/pkg/kubelet/util/cache"
 	"k8s.io/kubernetes/pkg/kubelet/util/format"
-	"k8s.io/kubernetes/pkg/kubelet/volume"
+	"k8s.io/kubernetes/pkg/kubelet/volumemanager"
 	"k8s.io/kubernetes/pkg/runtime"
 	"k8s.io/kubernetes/pkg/securitycontext"
 	kubetypes "k8s.io/kubernetes/pkg/types"
@@ -139,7 +139,7 @@ type DockerManager struct {
 	networkPlugin network.NetworkPlugin
 
 	// Kubelet Volume Manager.
-	volumeManager volume.VolumeManager
+	volumeManager volumemanager.VolumeManager
 
 	// Health check results.
 	livenessManager proberesults.Manager
@@ -213,7 +213,7 @@ func NewDockerManager(
 	containerLogsDir string,
 	osInterface kubecontainer.OSInterface,
 	networkPlugin network.NetworkPlugin,
-	volumeManager volume.VolumeManager,
+	volumeManager volumemanager.VolumeManager,
 	runtimeHelper kubecontainer.RuntimeHelper,
 	httpClient types.HttpGetter,
 	execHandler ExecHandler,

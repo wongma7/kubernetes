@@ -402,19 +402,6 @@ func NewMainKubelet(
 	klet.podCache = kubecontainer.NewCache()
 	klet.podManager = kubepod.NewBasicPodManager(kubepod.NewBasicMirrorClient(klet.kubeClient))
 
-	klet.volumePluginMgr, err =
-		NewInitializedVolumePluginMgr(klet, volumePlugins)
-	if err != nil {
-		return nil, err
-	}
-
-	klet.volumeManager, err = kubeletvolume.NewVolumeManager(
-		enableControllerAttachDetach,
-		hostname,
-		klet.podManager,
-		klet.kubeClient,
-		klet.volumePluginMgr)
-
 	// Initialize the runtime.
 	switch containerRuntime {
 	case "docker":

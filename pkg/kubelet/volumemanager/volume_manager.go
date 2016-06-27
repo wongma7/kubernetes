@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package volume
+package volumemanager
 
 import (
 	"fmt"
@@ -34,7 +34,7 @@ import (
 	"k8s.io/kubernetes/pkg/util/runtime"
 	"k8s.io/kubernetes/pkg/util/sets"
 	"k8s.io/kubernetes/pkg/util/wait"
-	kubevolume "k8s.io/kubernetes/pkg/volume"
+	"k8s.io/kubernetes/pkg/volume"
 	"k8s.io/kubernetes/pkg/volume/util/operationexecutor"
 	"k8s.io/kubernetes/pkg/volume/util/types"
 	"k8s.io/kubernetes/pkg/volume/util/volumehelper"
@@ -175,7 +175,7 @@ type volumeManager struct {
 
 	// volumePluginMgr is the volume plugin manager used to access volume
 	// plugins. It must be pre-initialized.
-	volumePluginMgr *kubevolume.VolumePluginMgr
+	volumePluginMgr *volume.VolumePluginMgr
 
 	// desiredStateOfWorld is a data structure containing the desired state of
 	// the world according to the volume manager: i.e. what volumes should be
@@ -235,7 +235,7 @@ func (vm *volumeManager) GetExtraSupplementalGroupsForPod(pod *api.Pod) []int64 
 		}
 	}
 
-	result := make([]int64, supplementalGroups.Len())
+	result := make([]int64, 0, supplementalGroups.Len())
 	for _, group := range supplementalGroups.List() {
 		iGroup, extra := getExtraSupplementalGid(group, pod)
 		if !extra {
