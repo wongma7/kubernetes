@@ -1260,7 +1260,7 @@ func (ctrl *PersistentVolumeController) findProvisionablePlugin(claim *api.Persi
 	}
 
 	// Find a plugin for the class
-	plugin, err := ctrl.volumePluginMgr.FindProvisionablePluginByName(string(storageClass.ProvisionerType))
+	plugin, err := ctrl.volumePluginMgr.FindProvisionablePluginByName(string(storageClass.Provisioner))
 	if err != nil {
 		return nil, nil, err
 	}

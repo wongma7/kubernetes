@@ -745,7 +745,7 @@ func ValidateNetworkPolicyUpdate(update, old *extensions.NetworkPolicy) field.Er
 // ValidateStorageClass validates a StorageClass.
 func ValidateStorageClass(storageClass *extensions.StorageClass) field.ErrorList {
 	allErrs := apivalidation.ValidateObjectMeta(&storageClass.ObjectMeta, false, apivalidation.NameIsDNSSubdomain, field.NewPath("metadata"))
-	allErrs = append(allErrs, validateProvisionerType(storageClass.ProvisionerType, field.NewPath("provisionerType"))...)
+	allErrs = append(allErrs, validateProvisioner(storageClass.Provisioner, field.NewPath("provisioner"))...)
 	allErrs = append(allErrs, validateProvisionerParameters(storageClass.ProvisionerParameters, field.NewPath("provisionerParameters"))...)
 
 	return allErrs
@@ -754,22 +754,22 @@ func ValidateStorageClass(storageClass *extensions.StorageClass) field.ErrorList
 // ValidateStorageClassUpdate tests if required fields in the StorageClass are set.
 func ValidateStorageClassUpdate(storageClass, oldStorageClass *extensions.StorageClass) field.ErrorList {
 	allErrs := apivalidation.ValidateObjectMetaUpdate(&storageClass.ObjectMeta, &oldStorageClass.ObjectMeta, field.NewPath("metadata"))
-	allErrs = append(allErrs, validateProvisionerType(storageClass.ProvisionerType, field.NewPath("provisionerType"))...)
+	allErrs = append(allErrs, validateProvisioner(storageClass.Provisioner, field.NewPath("provisioner"))...)
 	allErrs = append(allErrs, validateProvisionerParameters(storageClass.ProvisionerParameters, field.NewPath("provisionerParameters"))...)
 
 	return allErrs
 }
 
-// validateProvisionerType tests if provisionerType is a valid qualified name.
-func validateProvisionerType(provisionerType string, fldPath *field.Path) field.ErrorList {
+// validateProvisioner tests if provisioner is a valid qualified name.
+func validateProvisioner(provisioner string, fldPath *field.Path) field.ErrorList {
 	allErrs := field.ErrorList{}
-	if len(provisionerType) == 0 {
-		allErrs = append(allErrs, field.Required(fldPath, provisionerType))
+	if len(provisioner) == 0 {
+		allErrs = append(allErrs, field.Required(fldPath, provisioner))
 
 	}
-	if len(provisionerType) > 0 {
-		for _, msg := range validation.IsQualifiedName(strings.ToLower(provisionerType)) {
-			allErrs = append(allErrs, field.Invalid(fldPath, provisionerType, msg))
+	if len(provisioner) > 0 {
+		for _, msg := range validation.IsQualifiedName(strings.ToLower(provisioner)) {
+			allErrs = append(allErrs, field.Invalid(fldPath, provisioner, msg))
 		}
 	}
 	return allErrs

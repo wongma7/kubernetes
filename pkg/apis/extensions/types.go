@@ -903,20 +903,26 @@ type NetworkPolicyList struct {
 // +genclient=true
 // +nonNamespaced=true
 
-// StorageClass describes the parameters for a class of storage for
-// which PersistentVolumes can be dynamically provisioned.
-//
-// StorageClasses are non-namespaced; the name of the storage class
-// according to etcd is in ObjectMeta.Name.
+// StorageClass describes a named "class" of storage offered in a cluster.
+// Different classes might map to quality-of-service levels, or to backup policies,
+// or to arbitrary policies determined by the cluster administrators.  Kubernetes
+// itself is unopinionated about what classes represent.  This concept is sometimes
+// called "profiles" in other storage systems.
+// The name of a StorageClass object is significant, and is how users can request a particular class.
 type StorageClass struct {
 	unversioned.TypeMeta `json:",inline"`
 	api.ObjectMeta       `json:"metadata,omitempty"`
 
-	// ProvisionerType indicates the type of the provisioner.
-	ProvisionerType string `json:"provisionerType"`
+	// provisioner which driver is expected to handle this StorageClass.
+	// This is an optionally-prefixed name, like a label key.
+	// For example: "kubernetes.io/gce-pd" or "kubernetes.io/aws-ebs".
+	// This value may not be empty.
+	Provisioner string `json:"provisioner"`
 
-	// ProvisionerParameters holds the parameters for the provisioner that should
-	// create volumes of this storage class.
+	// provisionerParameters holds parameters for the provisioner.
+	// These values are opaque to the  system and are passed directly
+	// to the provisioner.  The only validation done on keys or values
+	// is that they are not empty.
 	ProvisionerParameters map[string]string `json:"provisionerParameters,omitempty"`
 }
 

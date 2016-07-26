@@ -219,6 +219,6 @@ func createStorageClass() *extensions.StorageClass {
 		ObjectMeta: api.ObjectMeta{
 			Name: "fast",
 		},
-		ProvisionerType: pluginName,
+		Provisioner: pluginName,
 	}
 }

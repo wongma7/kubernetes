@@ -20998,7 +20998,7 @@ func (x *StorageClass) CodecEncodeSelf(e *codec1978.Encoder) {
 			_, _, _ = yysep2, yyq2, yy2arr2
 			const yyr2 bool = false
 			yyq2[0] = true
-			yyq2[1] = x.ProvisionerType != ""
+			yyq2[1] = x.Provisioner != ""
 			yyq2[2] = len(x.ProvisionerParameters) != 0
 			yyq2[3] = x.Kind != ""
 			yyq2[4] = x.APIVersion != ""
@@ -21039,7 +21039,7 @@ func (x *StorageClass) CodecEncodeSelf(e *codec1978.Encoder) {
 					_ = yym9
 					if false {
 					} else {
-						r.EncodeString(codecSelferC_UTF81234, string(x.ProvisionerType))
+						r.EncodeString(codecSelferC_UTF81234, string(x.Provisioner))
 					}
 				} else {
 					r.EncodeString(codecSelferC_UTF81234, "")
@@ -21047,13 +21047,13 @@ func (x *StorageClass) CodecEncodeSelf(e *codec1978.Encoder) {
 			} else {
 				if yyq2[1] {
 					z.EncSendContainerState(codecSelfer_containerMapKey1234)
-					r.EncodeString(codecSelferC_UTF81234, string("provisionerType"))
+					r.EncodeString(codecSelferC_UTF81234, string("provisioner"))
 					z.EncSendContainerState(codecSelfer_containerMapValue1234)
 					yym10 := z.EncBinary()
 					_ = yym10
 					if false {
 					} else {
-						r.EncodeString(codecSelferC_UTF81234, string(x.ProvisionerType))
+						r.EncodeString(codecSelferC_UTF81234, string(x.Provisioner))
 					}
 				}
 			}
@@ -21208,11 +21208,11 @@ func (x *StorageClass) codecDecodeSelfFromMap(l int, d *codec1978.Decoder) {
 				yyv4 := &x.ObjectMeta
 				yyv4.CodecDecodeSelf(d)
 			}
-		case "provisionerType":
+		case "provisioner":
 			if r.TryDecodeAsNil() {
-				x.ProvisionerType = ""
+				x.Provisioner = ""
 			} else {
-				x.ProvisionerType = string(r.DecodeString())
+				x.Provisioner = string(r.DecodeString())
 			}
 		case "provisionerParameters":
 			if r.TryDecodeAsNil() {
@@ -21281,9 +21281,9 @@ func (x *StorageClass) codecDecodeSelfFromArray(l int, d *codec1978.Decoder) {
 	}
 	z.DecSendContainerState(codecSelfer_containerArrayElem1234)
 	if r.TryDecodeAsNil() {
-		x.ProvisionerType = ""
+		x.Provisioner = ""
 	} else {
-		x.ProvisionerType = string(r.DecodeString())
+		x.Provisioner = string(r.DecodeString())
 	}
 	yyj10++
 	if yyhl10 {

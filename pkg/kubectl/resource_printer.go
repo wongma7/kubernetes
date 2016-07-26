@@ -2009,7 +2009,7 @@ func printNetworkPolicyList(list *extensions.NetworkPolicyList, w io.Writer, opt
 
 func printStorageClass(sc *extensions.StorageClass, w io.Writer, options PrintOptions) error {
 	name := sc.Name
-	provtype := sc.ProvisionerType
+	provtype := sc.Provisioner
 
 	if _, err := fmt.Fprintf(w, "%s\t%s\t", name, provtype); err != nil {
 		return err

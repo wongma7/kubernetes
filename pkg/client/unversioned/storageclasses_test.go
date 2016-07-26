@@ -46,7 +46,7 @@ func TestListStorageClasses(t *testing.T) {
 								"name": "baz",
 							},
 						},
-						ProvisionerType: "aaa",
+						Provisioner: "aaa",
 					},
 				},
 			},
@@ -69,7 +69,7 @@ func TestGetStorageClass(t *testing.T) {
 						"name": "baz",
 					},
 				},
-				ProvisionerType: "aaa",
+				Provisioner: "aaa",
 			},
 		},
 	}
@@ -89,8 +89,8 @@ func TestGetStorageClassWithNoName(t *testing.T) {
 
 func TestUpdateStorageClass(t *testing.T) {
 	requestSC := &extensions.StorageClass{
-		ObjectMeta:      api.ObjectMeta{Name: "foo", ResourceVersion: "1"},
-		ProvisionerType: "aaa",
+		ObjectMeta:  api.ObjectMeta{Name: "foo", ResourceVersion: "1"},
+		Provisioner: "aaa",
 	}
 	c := &simple.Client{
 		Request: simple.Request{Method: "PUT", Path: testapi.Extensions.ResourcePath(getStorageClassResourceName(), "", "foo"), Query: simple.BuildQueryValues(nil)},
@@ -104,7 +104,7 @@ func TestUpdateStorageClass(t *testing.T) {
 						"name": "baz",
 					},
 				},
-				ProvisionerType: "aaa",
+				Provisioner: "aaa",
 			},
 		},
 	}
@@ -123,8 +123,8 @@ func TestDeleteStorageClass(t *testing.T) {
 
 func TestCreateStorageClass(t *testing.T) {
 	requestSC := &extensions.StorageClass{
-		ObjectMeta:      api.ObjectMeta{Name: "foo"},
-		ProvisionerType: "aaa",
+		ObjectMeta:  api.ObjectMeta{Name: "foo"},
+		Provisioner: "aaa",
 	}
 	c := &simple.Client{
 		Request: simple.Request{Method: "POST", Path: testapi.Extensions.ResourcePath(getStorageClassResourceName(), "", ""), Body: requestSC, Query: simple.BuildQueryValues(nil)},
@@ -138,7 +138,7 @@ func TestCreateStorageClass(t *testing.T) {
 						"name": "baz",
 					},
 				},
-				ProvisionerType: "aaa",
+				Provisioner: "aaa",
 			},
 		},
 	}

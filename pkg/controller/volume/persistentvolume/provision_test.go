@@ -41,7 +41,7 @@ var storageClasses = []*extensions.StorageClass{
 			Name: "gold",
 		},
 
-		ProvisionerType:       mockPluginName,
+		Provisioner:           mockPluginName,
 		ProvisionerParameters: class1Parameters,
 	},
 	{
@@ -51,7 +51,7 @@ var storageClasses = []*extensions.StorageClass{
 		ObjectMeta: api.ObjectMeta{
 			Name: "silver",
 		},
-		ProvisionerType:       mockPluginName,
+		Provisioner:           mockPluginName,
 		ProvisionerParameters: class2Parameters,
 	},
 }

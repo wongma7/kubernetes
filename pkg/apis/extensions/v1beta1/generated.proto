@@ -952,8 +952,8 @@ message StorageClass {
   // More info: http://releases.k8s.io/HEAD/docs/devel/api-conventions.md#metadata
   optional k8s.io.kubernetes.pkg.api.v1.ObjectMeta metadata = 1;
 
-  // ProvisionerType indicates the type of the provisioner.
-  optional string provisionerType = 2;
+  // Provisioner indicates the type of the provisioner.
+  optional string provisioner = 2;
 
   // ProvisionerParameters holds the parameters for the provisioner that should
   // create volumes of this storage class.

@@ -1343,7 +1343,7 @@ func DeepCopy_v1beta1_StorageClass(in interface{}, out interface{}, c *conversio
 		if err := v1.DeepCopy_v1_ObjectMeta(&in.ObjectMeta, &out.ObjectMeta, c); err != nil {
 			return err
 		}
-		out.ProvisionerType = in.ProvisionerType
+		out.Provisioner = in.Provisioner
 		if in.ProvisionerParameters != nil {
 			in, out := &in.ProvisionerParameters, &out.ProvisionerParameters
 			*out = make(map[string]string)

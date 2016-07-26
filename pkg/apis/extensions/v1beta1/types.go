@@ -1211,8 +1211,8 @@ type StorageClass struct {
 	// More info: http://releases.k8s.io/HEAD/docs/devel/api-conventions.md#metadata
 	v1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 
-	// ProvisionerType indicates the type of the provisioner.
-	ProvisionerType string `json:"provisionerType,omitempty" protobuf:"bytes,2,opt,name=provisionerType"`
+	// Provisioner indicates the type of the provisioner.
+	Provisioner string `json:"provisioner,omitempty" protobuf:"bytes,2,opt,name=provisioner"`
 
 	// ProvisionerParameters holds the parameters for the provisioner that should
 	// create volumes of this storage class.

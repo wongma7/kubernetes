@@ -1935,18 +1935,18 @@ func TestValidateStorageClass(t *testing.T) {
 		{
 			// Empty type and parameters
 			ObjectMeta:            api.ObjectMeta{Name: "foo"},
-			ProvisionerType:       "kubernetes.io/foo-provisioner",
+			Provisioner:           "kubernetes.io/foo-provisioner",
 			ProvisionerParameters: map[string]string{},
 		},
 		{
 			// nil parameters
-			ObjectMeta:      api.ObjectMeta{Name: "foo"},
-			ProvisionerType: "kubernetes.io/foo-provisioner",
+			ObjectMeta:  api.ObjectMeta{Name: "foo"},
+			Provisioner: "kubernetes.io/foo-provisioner",
 		},
 		{
 			// some parameters
-			ObjectMeta:      api.ObjectMeta{Name: "foo"},
-			ProvisionerType: "kubernetes.io/foo-provisioner",
+			ObjectMeta:  api.ObjectMeta{Name: "foo"},
+			Provisioner: "kubernetes.io/foo-provisioner",
 			ProvisionerParameters: map[string]string{
 				"kubernetes.io/foo-parameter": "free/form/string",
 				"foo-parameter":               "free-form-string",
@@ -1974,27 +1974,27 @@ func TestValidateStorageClass(t *testing.T) {
 
 	errorCases := map[string]extensions.StorageClass{
 		"namespace is present": {
-			ObjectMeta:      api.ObjectMeta{Name: "foo", Namespace: "bar"},
-			ProvisionerType: "kubernetes.io/foo-provisioner",
+			ObjectMeta:  api.ObjectMeta{Name: "foo", Namespace: "bar"},
+			Provisioner: "kubernetes.io/foo-provisioner",
 		},
-		"invalid provisionerType": {
-			ObjectMeta:      api.ObjectMeta{Name: "foo"},
-			ProvisionerType: "kubernetes.io/invalid/provisioner",
+		"invalid provisioner": {
+			ObjectMeta:  api.ObjectMeta{Name: "foo"},
+			Provisioner: "kubernetes.io/invalid/provisioner",
 		},
 		"invalid parameter name": {
-			ObjectMeta:      api.ObjectMeta{Name: "foo"},
-			ProvisionerType: "kubernetes.io/foo",
+			ObjectMeta:  api.ObjectMeta{Name: "foo"},
+			Provisioner: "kubernetes.io/foo",
 			ProvisionerParameters: map[string]string{
 				"invalid/parameter/name": "value",
 			},
 		},
-		"provisionerType: Required value": {
-			ObjectMeta:      api.ObjectMeta{Name: "foo"},
-			ProvisionerType: "",
+		"provisioner: Required value": {
+			ObjectMeta:  api.ObjectMeta{Name: "foo"},
+			Provisioner: "",
 		},
 		"too long parameters": {
 			ObjectMeta:            api.ObjectMeta{Name: "foo"},
-			ProvisionerType:       "kubernetes.io/foo",
+			Provisioner:           "kubernetes.io/foo",
 			ProvisionerParameters: longParameters,
 		},
 	}

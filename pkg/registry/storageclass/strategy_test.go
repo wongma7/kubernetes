@@ -36,7 +36,7 @@ func TestStorageClassStrategy(t *testing.T) {
 		ObjectMeta: api.ObjectMeta{
 			Name: "valid-class",
 		},
-		ProvisionerType: "kubernetes.io/aws-ebs",
+		Provisioner: "kubernetes.io/aws-ebs",
 		ProvisionerParameters: map[string]string{
 			"foo": "bar",
 		},
@@ -54,7 +54,7 @@ func TestStorageClassStrategy(t *testing.T) {
 			Name:            "valid-class-2",
 			ResourceVersion: "4",
 		},
-		ProvisionerType: "kubernetes.io/aws-ebs",
+		Provisioner: "kubernetes.io/aws-ebs",
 		ProvisionerParameters: map[string]string{
 			"foo": "bar",
 		},

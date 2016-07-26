@@ -2277,7 +2277,7 @@ __EOF__
   "metadata": {
     "name": "storage-class-name"
   },
-  "provisionerType": "kubernetes.io/fake-provisioner-type",
+  "provisioner": "kubernetes.io/fake-provisioner-type",
   "provisionerParameters": {
     "zone":"us-east-1b",
     "type":"ssd"

@@ -10818,9 +10818,9 @@
       "$ref": "v1.ObjectMeta",
       "description": "Standard object's metadata. More info: http://releases.k8s.io/HEAD/docs/devel/api-conventions.md#metadata"
      },
-     "provisionerType": {
+     "provisioner": {
       "type": "string",
-      "description": "ProvisionerType indicates the type of the provisioner."
+      "description": "Provisioner indicates the type of the provisioner."
      },
      "provisionerParameters": {
       "type": "object",

@@ -58,7 +58,7 @@ func DoTestStorageClasses(t *testing.T, client *client.Client, ns *api.Namespace
 		ObjectMeta: api.ObjectMeta{
 			Name: "gold",
 		},
-		ProvisionerType: provisionerPluginName,
+		Provisioner: provisionerPluginName,
 	}
 
 	if _, err := client.Extensions().StorageClasses().Create(&s); err != nil {

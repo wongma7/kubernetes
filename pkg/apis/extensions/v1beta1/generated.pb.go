@@ -2865,8 +2865,8 @@ func (m *StorageClass) MarshalTo(data []byte) (int, error) {
 	i += n72
 	data[i] = 0x12
 	i++
-	i = encodeVarintGenerated(data, i, uint64(len(m.ProvisionerType)))
-	i += copy(data[i:], m.ProvisionerType)
+	i = encodeVarintGenerated(data, i, uint64(len(m.Provisioner)))
+	i += copy(data[i:], m.Provisioner)
 	if len(m.ProvisionerParameters) > 0 {
 		for k := range m.ProvisionerParameters {
 			data[i] = 0x1a
@@ -4033,7 +4033,7 @@ func (m *StorageClass) Size() (n int) {
 	_ = l
 	l = m.ObjectMeta.Size()
 	n += 1 + l + sovGenerated(uint64(l))
-	l = len(m.ProvisionerType)
+	l = len(m.Provisioner)
 	n += 1 + l + sovGenerated(uint64(l))
 	if len(m.ProvisionerParameters) > 0 {
 		for k, v := range m.ProvisionerParameters {
@@ -4940,7 +4940,7 @@ func (this *StorageClass) String() string {
 	mapStringForProvisionerParameters += "}"
 	s := strings.Join([]string{`&StorageClass{`,
 		`ObjectMeta:` + strings.Replace(strings.Replace(this.ObjectMeta.String(), "ObjectMeta", "k8s_io_kubernetes_pkg_api_v1.ObjectMeta", 1), `&`, ``, 1) + `,`,
-		`ProvisionerType:` + fmt.Sprintf("%v", this.ProvisionerType) + `,`,
+		`Provisioner:` + fmt.Sprintf("%v", this.Provisioner) + `,`,
 		`ProvisionerParameters:` + mapStringForProvisionerParameters + `,`,
 		`}`,
 	}, "")
@@ -13150,7 +13150,7 @@ func (m *StorageClass) Unmarshal(data []byte) error {
 			iNdEx = postIndex
 		case 2:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field ProvisionerType", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field Provisioner", wireType)
 			}
 			var stringLen uint64
 			for shift := uint(0); ; shift += 7 {
@@ -13175,7 +13175,7 @@ func (m *StorageClass) Unmarshal(data []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.ProvisionerType = string(data[iNdEx:postIndex])
+			m.Provisioner = string(data[iNdEx:postIndex])
 			iNdEx = postIndex
 		case 3:
 			if wireType != 2 {

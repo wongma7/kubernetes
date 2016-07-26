@@ -2426,7 +2426,7 @@ func autoConvert_v1beta1_StorageClass_To_extensions_StorageClass(in *StorageClas
 	if err := s.Convert(&in.ObjectMeta, &out.ObjectMeta, 0); err != nil {
 		return err
 	}
-	out.ProvisionerType = in.ProvisionerType
+	out.Provisioner = in.Provisioner
 	out.ProvisionerParameters = in.ProvisionerParameters
 	return nil
 }
@@ -2443,7 +2443,7 @@ func autoConvert_extensions_StorageClass_To_v1beta1_StorageClass(in *extensions.
 	if err := s.Convert(&in.ObjectMeta, &out.ObjectMeta, 0); err != nil {
 		return err
 	}
-	out.ProvisionerType = in.ProvisionerType
+	out.Provisioner = in.Provisioner
 	out.ProvisionerParameters = in.ProvisionerParameters
 	return nil
 }

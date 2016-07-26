@@ -41,7 +41,7 @@ func validNewStorageClass(name string) *extensions.StorageClass {
 		ObjectMeta: api.ObjectMeta{
 			Name: name,
 		},
-		ProvisionerType: "kubernetes.io/aws-ebs",
+		Provisioner: "kubernetes.io/aws-ebs",
 		ProvisionerParameters: map[string]string{
 			"foo": "bar",
 		},

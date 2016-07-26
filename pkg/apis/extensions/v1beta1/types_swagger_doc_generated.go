@@ -677,7 +677,7 @@ func (ScaleStatus) SwaggerDoc() map[string]string {
 var map_StorageClass = map[string]string{
 	"":                      "StorageClass describes the parameters for a class of storage for which PersistentVolumes can be dynamically provisioned.\n\nStorageClasses are non-namespaced; the name of the storage class according to etcd is in ObjectMeta.Name.",
 	"metadata":              "Standard object's metadata. More info: http://releases.k8s.io/HEAD/docs/devel/api-conventions.md#metadata",
-	"provisionerType":       "ProvisionerType indicates the type of the provisioner.",
+	"provisioner":           "Provisioner indicates the type of the provisioner.",
 	"provisionerParameters": "ProvisionerParameters holds the parameters for the provisioner that should create volumes of this storage class.",
 }
 

@@ -984,7 +984,7 @@ func DeepCopy_extensions_StorageClass(in interface{}, out interface{}, c *conver
 		if err := api.DeepCopy_api_ObjectMeta(&in.ObjectMeta, &out.ObjectMeta, c); err != nil {
 			return err
 		}
-		out.ProvisionerType = in.ProvisionerType
+		out.Provisioner = in.Provisioner
 		if in.ProvisionerParameters != nil {
 			in, out := &in.ProvisionerParameters, &out.ProvisionerParameters
 			*out = make(map[string]string)

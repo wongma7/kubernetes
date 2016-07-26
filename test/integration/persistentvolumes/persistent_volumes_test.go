@@ -662,7 +662,7 @@ func TestPersistentVolumeProvisionMultiPVCs(t *testing.T) {
 		ObjectMeta: api.ObjectMeta{
 			Name: "gold",
 		},
-		ProvisionerType: provisionerPluginName,
+		Provisioner: provisionerPluginName,
 	}
 	testClient.Extensions().StorageClasses().Create(&storageClass)
 
