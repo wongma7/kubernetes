@@ -370,8 +370,9 @@ var _ = framework.KubeDescribe("Volumes [Feature:Volumes]", func() {
 			config := VolumeTestConfig{
 				namespace:   namespace.Name,
 				prefix:      "nfs",
-				serverImage: "eatnumber1/nfs",
-				serverPorts: []int{2049, 111, 1066, 1067},
+				serverImage: "wongma7/volume-nfs",
+				serverPorts: []int{2049, 20048},
+				volumes:     map[string]string{"/tmp": "/exports"},
 			}
 
 			defer func() {
@@ -386,7 +387,7 @@ var _ = framework.KubeDescribe("Volumes [Feature:Volumes]", func() {
 			volume := api.VolumeSource{
 				NFS: &api.NFSVolumeSource{
 					Server:   serverIP,
-					Path:     "/",
+					Path:     "/exports",
 					ReadOnly: true,
 				},
 			}

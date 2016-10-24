@@ -415,9 +415,10 @@ var _ = framework.KubeDescribe("PersistentVolumes", func() {
 	NFSconfig = VolumeTestConfig{
 		namespace:   api.NamespaceDefault,
 		prefix:      "nfs",
-		serverImage: "eatnumber1/nfs",
-		serverPorts: []int{2049, 111, 1067, 1066},
+		serverImage: "wongma7/volume-nfs",
+		serverPorts: []int{2049, 20048},
 		serverArgs:  []string{"-G", "777", "/exports"},
+		volumes:     map[string]string{"/tmp": "/exports"},
 	}
 
 	BeforeEach(func() {
@@ -649,6 +650,7 @@ func makeWritePod(ns string, pvcName string) *api.Pod {
 					},
 				},
 			},
+			RestartPolicy: api.RestartPolicyOnFailure,
 			Volumes: []api.Volume{
 				{
 					Name: "nfs-pvc",
