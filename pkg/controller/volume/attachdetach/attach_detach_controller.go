@@ -25,6 +25,7 @@ import (
 
 	"github.com/golang/glog"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/runtime"
 	v1core "k8s.io/client-go/kubernetes/typed/core/v1"
@@ -101,6 +102,8 @@ func NewAttachDetachController(
 		pvcsSynced: pvcInformer.Informer().HasSynced,
 		pvLister:   pvInformer.Lister(),
 		pvsSynced:  pvInformer.Informer().HasSynced,
+		podLister:  podInformer.Lister(),
+		podsSynced: podInformer.Informer().HasSynced,
 		cloud:      cloud,
 	}
 
@@ -145,7 +148,6 @@ func NewAttachDetachController(
 		UpdateFunc: adc.podUpdate,
 		DeleteFunc: adc.podDelete,
 	})
-	adc.podsSynced = podInformer.Informer().HasSynced
 
 	nodeInformer.Informer().AddEventHandler(kcache.ResourceEventHandlerFuncs{
 		AddFunc:    adc.nodeAdd,
@@ -174,7 +176,12 @@ type attachDetachController struct {
 	pvLister  corelisters.PersistentVolumeLister
 	pvsSynced kcache.InformerSynced
 
-	podsSynced  kcache.InformerSynced
+	// podLister is the shared pod lister used to fetch and store pod objects
+	// from the API server. It is shared with other controllers and therefore
+	// the pod objects in its store should be treated as immutable.
+	podLister  corelisters.PodLister
+	podsSynced kcache.InformerSynced
+
 	nodesSynced kcache.InformerSynced
 
 	// cloud provider used by volume host
@@ -294,11 +301,11 @@ func (adc *attachDetachController) getNodeVolumeDevicePath(
 func (adc *attachDetachController) populateDesiredStateOfWorld() error {
 	glog.V(5).Infof("Populating DesiredStateOfworld")
 
-	pods, err := adc.kubeClient.Core().Pods(v1.NamespaceAll).List(metav1.ListOptions{})
+	pods, err := adc.podLister.List(labels.Everything())
 	if err != nil {
 		return err
 	}
-	for _, pod := range pods.Items {
+	for _, pod := range pods {
 		podToAdd := pod
 		adc.podAdd(&podToAdd)
 		for _, podVolume := range podToAdd.Spec.Volumes {
