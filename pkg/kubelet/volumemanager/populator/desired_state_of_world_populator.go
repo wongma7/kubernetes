@@ -33,6 +33,7 @@ import (
 	"k8s.io/kubernetes/pkg/api"
 	"k8s.io/kubernetes/pkg/api/v1"
 	"k8s.io/kubernetes/pkg/client/clientset_generated/clientset"
+	"k8s.io/kubernetes/pkg/kubelet/config"
 	kubecontainer "k8s.io/kubernetes/pkg/kubelet/container"
 	"k8s.io/kubernetes/pkg/kubelet/pod"
 	"k8s.io/kubernetes/pkg/kubelet/status"
@@ -48,13 +49,18 @@ import (
 // if it has volumes. It also verifies that the pods in the desired state of the
 // world cache still exist, if not, it removes them.
 type DesiredStateOfWorldPopulator interface {
-	Run(stopCh <-chan struct{})
+	Run(sourcesReady config.SourcesReady, stopCh <-chan struct{})
 
 	// ReprocessPod removes the specified pod from the list of processedPods
 	// (if it exists) forcing it to be reprocessed. This is required to enable
 	// remounting volumes on pod updates (volumes like Downward API volumes
 	// depend on this behavior to ensure volume content is updated).
 	ReprocessPod(podName volumetypes.UniquePodName)
+
+	// HasAddedPods returns whether the populator has looped through the list
+	// of active pods and added them to the desired state of the world cache
+	// at least once.
+	HasAddedPods() bool
 }
 
 // NewDesiredStateOfWorldPopulator returns a new instance of
@@ -86,6 +92,7 @@ func NewDesiredStateOfWorldPopulator(
 			processedPods: make(map[volumetypes.UniquePodName]bool)},
 		kubeContainerRuntime:     kubeContainerRuntime,
 		keepTerminatedPodVolumes: keepTerminatedPodVolumes,
+		hasAddedPods:             false,
 	}
 }
 
@@ -100,6 +107,7 @@ type desiredStateOfWorldPopulator struct {
 	kubeContainerRuntime      kubecontainer.Runtime
 	timeOfLastGetPodStatus    time.Time
 	keepTerminatedPodVolumes  bool
+	hasAddedPods              bool
 }
 
 type processedPods struct {
@@ -107,8 +115,8 @@ type processedPods struct {
 	sync.RWMutex
 }
 
-func (dswp *desiredStateOfWorldPopulator) Run(stopCh <-chan struct{}) {
-	wait.Until(dswp.populatorLoopFunc(), dswp.loopSleepDuration, stopCh)
+func (dswp *desiredStateOfWorldPopulator) Run(sourcesReady config.SourcesReady, stopCh <-chan struct{}) {
+	wait.Until(dswp.populatorLoopFunc(sourcesReady), dswp.loopSleepDuration, stopCh)
 }
 
 func (dswp *desiredStateOfWorldPopulator) ReprocessPod(
@@ -116,8 +124,17 @@ func (dswp *desiredStateOfWorldPopulator) ReprocessPod(
 	dswp.deleteProcessedPod(podName)
 }
 
-func (dswp *desiredStateOfWorldPopulator) populatorLoopFunc() func() {
+func (dswp *desiredStateOfWorldPopulator) HasAddedPods() bool {
+	return dswp.hasAddedPods
+}
+
+func (dswp *desiredStateOfWorldPopulator) populatorLoopFunc(sourcesReady config.SourcesReady) func() {
 	return func() {
+		if !sourcesReady.AllReady() {
+			glog.V(5).Infof("Sources aren't all ready, don't start populating desired state of world yet")
+			return
+		}
+
 		dswp.findAndAddNewPods()
 
 		// findAndRemoveDeletedPods() calls out to the container runtime to
@@ -156,6 +173,7 @@ func (dswp *desiredStateOfWorldPopulator) findAndAddNewPods() {
 		}
 		dswp.processPodVolumes(pod)
 	}
+	dswp.hasAddedPods = true
 }
 
 // Iterate through all pods in desired state of world, and remove if they no

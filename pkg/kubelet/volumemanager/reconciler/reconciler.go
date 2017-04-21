@@ -32,7 +32,6 @@ import (
 	"k8s.io/kubernetes/cmd/kubelet/app/options"
 	"k8s.io/kubernetes/pkg/api/v1"
 	"k8s.io/kubernetes/pkg/client/clientset_generated/clientset"
-	"k8s.io/kubernetes/pkg/kubelet/config"
 	"k8s.io/kubernetes/pkg/kubelet/volumemanager/cache"
 	"k8s.io/kubernetes/pkg/util"
 	"k8s.io/kubernetes/pkg/util/goroutinemap/exponentialbackoff"
@@ -59,7 +58,7 @@ type Reconciler interface {
 	// If attach/detach management is enabled, the manager will also check if
 	// volumes that should be attached are attached and volumes that should
 	// be detached are detached and trigger attach/detach operations as needed.
-	Run(sourcesReady config.SourcesReady, stopCh <-chan struct{})
+	Run(stopCh <-chan struct{})
 
 	// StatesHasBeenSynced returns true only after syncStates process starts to sync
 	// states at least once after kubelet starts
@@ -80,6 +79,8 @@ type Reconciler interface {
 // nodeName - the Name for this node, used by Attach and Detach methods
 // desiredStateOfWorld - cache containing the desired state of the world
 // actualStateOfWorld - cache containing the actual state of the world
+// populatorHasAddedPods - checker for whether the populator has added pods to
+//   the desiredStateOfWorld yet
 // operationExecutor - used to trigger attach/detach/mount/unmount operations
 //   safely (prevents more than one operation from being triggered on the same
 //   volume)
@@ -94,6 +95,7 @@ func NewReconciler(
 	nodeName types.NodeName,
 	desiredStateOfWorld cache.DesiredStateOfWorld,
 	actualStateOfWorld cache.ActualStateOfWorld,
+	populatorHasAddedPods func() bool,
 	operationExecutor operationexecutor.OperationExecutor,
 	mounter mount.Interface,
 	volumePluginMgr *volumepkg.VolumePluginMgr,
@@ -107,6 +109,7 @@ func NewReconciler(
 		nodeName:                      nodeName,
 		desiredStateOfWorld:           desiredStateOfWorld,
 		actualStateOfWorld:            actualStateOfWorld,
+		populatorHasAddedPods:         populatorHasAddedPods,
 		operationExecutor:             operationExecutor,
 		mounter:                       mounter,
 		volumePluginMgr:               volumePluginMgr,
@@ -124,6 +127,7 @@ type reconciler struct {
 	nodeName                      types.NodeName
 	desiredStateOfWorld           cache.DesiredStateOfWorld
 	actualStateOfWorld            cache.ActualStateOfWorld
+	populatorHasAddedPods         func() bool
 	operationExecutor             operationexecutor.OperationExecutor
 	mounter                       mount.Interface
 	volumePluginMgr               *volumepkg.VolumePluginMgr
@@ -131,21 +135,21 @@ type reconciler struct {
 	timeOfLastSync                time.Time
 }
 
-func (rc *reconciler) Run(sourcesReady config.SourcesReady, stopCh <-chan struct{}) {
-	wait.Until(rc.reconciliationLoopFunc(sourcesReady), rc.loopSleepDuration, stopCh)
+func (rc *reconciler) Run(stopCh <-chan struct{}) {
+	wait.Until(rc.reconciliationLoopFunc(), rc.loopSleepDuration, stopCh)
 }
 
-func (rc *reconciler) reconciliationLoopFunc(sourcesReady config.SourcesReady) func() {
+func (rc *reconciler) reconciliationLoopFunc() func() {
 	return func() {
 		rc.reconcile()
 
-		// Add all sources ready check so that reconciler's reconstruct process will start after
-		// desired state of world is populated with pod volume information from different sources. Otherwise,
-		// reconciler's reconstruct process may add incomplete volume information and cause confusion.
-		// In addition, if some sources are not ready, the reconstruct process may clean up pods' volumes
-		// that are still in use because desired states could not get a complete list of pods.
-		if sourcesReady.AllReady() && time.Since(rc.timeOfLastSync) > rc.syncDuration {
-			glog.V(5).Infof("Sources are all ready, starting reconstruct state function")
+		// Add a check that the populator has added pods so that reconciler's reconstruct process will start
+		// after desired state of world is populated with pod volume information. Otherwise, reconciler's
+		// reconstruct process may add incomplete volume information and cause confusion. In addition, if the
+		// desired state of world has not been populated yet, the reconstruct process may clean up pods' volumes
+		// that are still in use because desired state of world does not contain a complete list of pods.
+		if rc.populatorHasAddedPods() && time.Since(rc.timeOfLastSync) > rc.syncDuration {
+			glog.V(5).Infof("Desired state of world has been populated with pods, starting reconstruct state function")
 			rc.sync()
 		}
 	}
