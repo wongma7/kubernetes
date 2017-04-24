@@ -32,6 +32,7 @@ import (
 	"k8s.io/kubernetes/cmd/kubelet/app/options"
 	"k8s.io/kubernetes/pkg/api/v1"
 	"k8s.io/kubernetes/pkg/client/clientset_generated/clientset"
+	"k8s.io/kubernetes/pkg/kubelet/config"
 	"k8s.io/kubernetes/pkg/kubelet/volumemanager/cache"
 	"k8s.io/kubernetes/pkg/util"
 	"k8s.io/kubernetes/pkg/util/goroutinemap/exponentialbackoff"
@@ -58,7 +59,7 @@ type Reconciler interface {
 	// If attach/detach management is enabled, the manager will also check if
 	// volumes that should be attached are attached and volumes that should
 	// be detached are detached and trigger attach/detach operations as needed.
-	Run(stopCh <-chan struct{})
+	Run(sourcesReady config.SourcesReady, stopCh <-chan struct{})
 
 	// StatesHasBeenSynced returns true only after syncStates process starts to sync
 	// states at least once after kubelet starts
@@ -135,11 +136,11 @@ type reconciler struct {
 	timeOfLastSync                time.Time
 }
 
-func (rc *reconciler) Run(stopCh <-chan struct{}) {
-	wait.Until(rc.reconciliationLoopFunc(), rc.loopSleepDuration, stopCh)
+func (rc *reconciler) Run(sourcesReady config.SourcesReady, stopCh <-chan struct{}) {
+	wait.Until(rc.reconciliationLoopFunc(sourcesReady), rc.loopSleepDuration, stopCh)
 }
 
-func (rc *reconciler) reconciliationLoopFunc() func() {
+func (rc *reconciler) reconciliationLoopFunc(sourcesReady config.SourcesReady) func() {
 	return func() {
 		rc.reconcile()
 
@@ -148,7 +149,7 @@ func (rc *reconciler) reconciliationLoopFunc() func() {
 		// reconstruct process may add incomplete volume information and cause confusion. In addition, if the
 		// desired state of world has not been populated yet, the reconstruct process may clean up pods' volumes
 		// that are still in use because desired state of world does not contain a complete list of pods.
-		if rc.populatorHasAddedPods() && time.Since(rc.timeOfLastSync) > rc.syncDuration {
+		if sourcesReady.AllReady() && rc.populatorHasAddedPods() && time.Since(rc.timeOfLastSync) > rc.syncDuration {
 			glog.V(5).Infof("Desired state of world has been populated with pods, starting reconstruct state function")
 			rc.sync()
 		}
@@ -570,6 +571,7 @@ func (rc *reconciler) updateStates(volumesNeedUpdate map[v1.UniqueVolumeName]*re
 		}
 	}
 
+	glog.V(1).Infof("volumesNeedUpdate %v", volumesNeedUpdate)
 	// Get the list of volumes from desired state and update OuterVolumeSpecName if the information is available
 	volumesToMount := rc.desiredStateOfWorld.GetVolumesToMount()
 	for _, volumeToMount := range volumesToMount {

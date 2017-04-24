@@ -20,19 +20,21 @@ ETCD_VERSION=${ETCD_VERSION:-3.0.17}
 ETCD_HOST=${ETCD_HOST:-127.0.0.1}
 ETCD_PORT=${ETCD_PORT:-2379}
 
-kube::etcd::validate() {
-  # validate if in path
-  which etcd >/dev/null || {
-    kube::log::usage "etcd must be in your PATH"
-    exit 1
-  }
-
+kube::etcd::validate_not_running() {
   # validate it is not running
   if pgrep -x etcd >/dev/null 2>&1; then
     kube::log::usage "etcd appears to already be running on this machine (`pgrep -xl etcd`) (or its a zombie and you need to kill its parent)."
     kube::log::usage "retry after you resolve this etcd error."
     exit 1
   fi
+}
+
+kube::etcd::validate() {
+  # validate if in path
+  which etcd >/dev/null || {
+    kube::log::usage "etcd must be in your PATH"
+    exit 1
+  }
 
   # validate installed version is at least equal to minimum
   version=$(etcd --version | tail -n +1 | head -n 1 | cut -d " " -f 3)

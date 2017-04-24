@@ -130,10 +130,10 @@ func (dswp *desiredStateOfWorldPopulator) HasAddedPods() bool {
 
 func (dswp *desiredStateOfWorldPopulator) populatorLoopFunc(sourcesReady config.SourcesReady) func() {
 	return func() {
-		if !sourcesReady.AllReady() {
-			glog.V(5).Infof("Sources aren't all ready, don't start populating desired state of world yet")
-			return
-		}
+		//if !sourcesReady.AllReady() {
+		//	glog.V(5).Infof("Sources aren't all ready, don't start populating desired state of world yet")
+		//	return
+		//}
 
 		dswp.findAndAddNewPods()
 

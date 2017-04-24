@@ -241,7 +241,7 @@ func (vm *volumeManager) Run(sourcesReady config.SourcesReady, stopCh <-chan str
 	glog.V(2).Infof("The desired_state_of_world populator starts")
 
 	glog.Infof("Starting Kubelet Volume Manager")
-	go vm.reconciler.Run(stopCh)
+	go vm.reconciler.Run(sourcesReady, stopCh)
 
 	<-stopCh
 	glog.Infof("Shutting down Kubelet Volume Manager")
@@ -387,6 +387,8 @@ func (vm *volumeManager) getUnmountedVolumes(
 	for _, mountedVolume := range vm.actualStateOfWorld.GetMountedVolumesForPod(podName) {
 		mountedVolumes.Insert(mountedVolume.OuterVolumeSpecName)
 	}
+	glog.V(1).Infof("mountedVolumes %v", mountedVolumes)
+	glog.V(1).Infof("expectedVolumes %v", expectedVolumes)
 	return filterUnmountedVolumes(mountedVolumes, expectedVolumes)
 }
 
