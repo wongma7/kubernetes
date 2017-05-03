@@ -33,8 +33,10 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/uuid"
+	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/kubernetes/pkg/api"
 	"k8s.io/kubernetes/pkg/api/v1"
+	extensions "k8s.io/kubernetes/pkg/apis/extensions/v1beta1"
 	"k8s.io/kubernetes/pkg/client/clientset_generated/clientset"
 	awscloud "k8s.io/kubernetes/pkg/cloudprovider/providers/aws"
 	gcecloud "k8s.io/kubernetes/pkg/cloudprovider/providers/gce"
@@ -513,6 +515,33 @@ func DeletePodWithWait(f *Framework, c clientset.Interface, pod *v1.Pod) error {
 	return nil
 }
 
+func DeleteDeploymentWithWait(c clientset.Interface, deployment *extensions.Deployment) error {
+	if deployment == nil {
+		return nil
+	}
+	Logf("Deleting deployment %v", deployment.Name)
+	err := c.ExtensionsV1beta1().Deployments(deployment.Namespace).Delete(deployment.Name, &metav1.DeleteOptions{})
+	if err != nil {
+		if apierrs.IsNotFound(err) {
+			return nil // assume deployment was deleted already
+		}
+		return fmt.Errorf("deployment Delete API error: %v", err)
+	}
+
+	// wait for the deployment to be deleted.
+	err = wait.Poll(5*time.Second, PodStartTimeout, func() (bool, error) {
+		_, err := c.ExtensionsV1beta1().Deployments(deployment.Namespace).Get(deployment.Name, metav1.GetOptions{})
+		if err != nil && !apierrs.IsNotFound(err) {
+			return false, err
+		}
+		if apierrs.IsNotFound(err) {
+			return true, nil
+		}
+		return false, nil
+	})
+	return err
+}
+
 // Create the test pod, wait for (hopefully) success, and then delete the pod.
 // Note: need named return value so that the err assignment in the defer sets the returned error.
 //       Has been shown to be necessary using Go 1.7.
@@ -804,6 +833,36 @@ func CreatePod(client clientset.Interface, namespace string, pvclaims []*v1.Pers
 // Define and create a pod with a mounted PV.  Pod runs infinite loop until killed.
 func CreateClientPod(c clientset.Interface, ns string, pvc *v1.PersistentVolumeClaim) (*v1.Pod, error) {
 	return CreatePod(c, ns, []*v1.PersistentVolumeClaim{pvc}, true, "")
+}
+
+// Define and create a deployment with 1 replica pod with a mounted PV.  Pod runs infinite loop until killed.
+// map[string]string{"name": "sample-pod-3"}
+func CreateClientDeployment(c clientset.Interface, ns string, pvc *v1.PersistentVolumeClaim, podLabels map[string]string) (*extensions.Deployment, error) {
+	deployment := NewDeployment("", int32(1), podLabels, "", "", extensions.RecreateDeploymentStrategyType)
+	deployment.ObjectMeta = metav1.ObjectMeta{
+		GenerateName: "pvc-tester-",
+		Namespace:    ns,
+	}
+	pod := MakePod(ns, []*v1.PersistentVolumeClaim{pvc}, true, "")
+	deployment.Spec.Template.Spec = pod.Spec
+	deployment, err := c.ExtensionsV1beta1().Deployments(ns).Create(deployment)
+	if err != nil {
+		return nil, fmt.Errorf("deployment Create API error: %v", err)
+	}
+
+	// Waiting for deployment to be at desired state
+	err = WaitForDeploymentStatus(c, deployment)
+	if err != nil {
+		return deployment, fmt.Errorf("deployment %q is not at desired state: %v", deployment.Name, err)
+	}
+
+	// get fresh deployment info
+	deployment, err = c.ExtensionsV1beta1().Deployments(ns).Get(deployment.Name, metav1.GetOptions{})
+	if err != nil {
+		return deployment, fmt.Errorf("deployment Get API error: %v", err)
+	}
+
+	return deployment, nil
 }
 
 // wait until all pvcs phase set to bound

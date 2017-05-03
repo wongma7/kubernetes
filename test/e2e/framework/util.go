@@ -4400,6 +4400,35 @@ func RestartKubeProxy(host string) error {
 	return nil
 }
 
+func RestartKubelet(host string) error {
+	// TODO: Make it work for all providers.
+	if !ProviderIs("aws") {
+		return fmt.Errorf("unsupported provider: %s", TestContext.Provider)
+	}
+	cmd := "sudo systemctl restart kubelet"
+	Logf("Restarting kubelet via ssh, running: %v", cmd)
+	result, err := SSH(cmd, host, TestContext.Provider)
+	if err != nil || result.Code != 0 {
+		LogSSHResult(result)
+		return fmt.Errorf("couldn't restart kubelet: %v", err)
+	}
+	return nil
+}
+
+func WaitForKubeletUp(host string) error {
+	cmd := "curl http://localhost:10248/healthz"
+	for start := time.Now(); time.Since(start) < time.Minute; time.Sleep(5 * time.Second) {
+		result, err := SSH(cmd, host, TestContext.Provider)
+		if err != nil || result.Code != 0 {
+			LogSSHResult(result)
+		}
+		if result.Stdout == "ok" {
+			return nil
+		}
+	}
+	return fmt.Errorf("waiting for kubelet timed out")
+}
+
 func RestartApiserver(c discovery.ServerVersionInterface) error {
 	// TODO: Make it work for all providers.
 	if !ProviderIs("gce", "gke", "aws") {
@@ -4427,7 +4456,7 @@ func sshRestartMaster() error {
 		// container.
 		command = "sudo docker ps | grep kube-apiserver_kube-apiserver | cut -d ' ' -f 1 | xargs sudo docker kill"
 	} else {
-		command = "sudo /etc/init.d/kube-apiserver restart"
+		command = "sudo docker ps | grep k8s_kube-apiserver | cut -d ' ' -f 1 | xargs sudo docker kill"
 	}
 	Logf("Restarting master via ssh, running: %v", command)
 	result, err := SSH(command, GetMasterHost()+":22", TestContext.Provider)
@@ -4446,6 +4475,35 @@ func WaitForApiserverUp(c clientset.Interface) error {
 		}
 	}
 	return fmt.Errorf("waiting for apiserver timed out")
+}
+
+func RestartControllerManager() error {
+	// TODO: Make it work for all providers.
+	if !ProviderIs("aws") {
+		return fmt.Errorf("unsupported provider: %s", TestContext.Provider)
+	}
+	cmd := "sudo docker ps | grep k8s_kube-controller-manager | cut -d ' ' -f 1 | xargs sudo docker kill"
+	Logf("Restarting controller-manager via ssh, running: %v", cmd)
+	result, err := SSH(cmd, GetMasterHost()+":22", TestContext.Provider)
+	if err != nil || result.Code != 0 {
+		LogSSHResult(result)
+		return fmt.Errorf("couldn't restart controller-manager: %v", err)
+	}
+	return nil
+}
+
+func WaitForControllerManagerUp() error {
+	cmd := "curl http://localhost:" + strconv.Itoa(ports.ControllerManagerPort) + "/healthz"
+	for start := time.Now(); time.Since(start) < time.Minute; time.Sleep(5 * time.Second) {
+		result, err := SSH(cmd, GetMasterHost()+":22", TestContext.Provider)
+		if err != nil || result.Code != 0 {
+			LogSSHResult(result)
+		}
+		if result.Stdout == "ok" {
+			return nil
+		}
+	}
+	return fmt.Errorf("waiting for controller-manager timed out")
 }
 
 // WaitForClusterSize waits until the cluster has desired size and there is no not-ready nodes in it.

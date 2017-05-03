@@ -682,8 +682,40 @@ func waitForPDDetach(diskName string, nodeName types.NodeName) error {
 
 			framework.Logf("Waiting for GCE PD %q to detach from %q.", diskName, nodeName)
 		}
-
 		return fmt.Errorf("Gave up waiting for GCE PD %q to detach from %q after %v", diskName, nodeName, gcePDDetachTimeout)
+	} else if framework.TestContext.Provider == "aws" {
+		// Because the test framework does not init an aws cloudprovider, use the API. Assume InstanceId == nodeName
+		client := ec2.New(session.New())
+
+		tokens := strings.Split(diskName, "/")
+		awsVolumeID := tokens[len(tokens)-1]
+
+		request := ec2.DescribeVolumesInput{
+			VolumeIds: []*string{aws.String(awsVolumeID)},
+		}
+
+		for start := time.Now(); time.Since(start) < gcePDDetachTimeout; time.Sleep(gcePDDetachPollTime) {
+			response, err := client.DescribeVolumes(&request)
+			if err != nil {
+				return fmt.Errorf("error describing EBS volume: %v", err)
+			}
+
+			for _, v := range response.Volumes {
+				if len(v.Attachments) == 0 {
+					framework.Logf("AWS EBS %q appears to have successfully detached from %q.", diskName, nodeName)
+					return nil
+				}
+				for _, a := range v.Attachments {
+					if *a.InstanceId == string(nodeName) && *a.State == "detached" {
+						framework.Logf("a AWS EBS %q appears to have successfully detached from %q.", diskName, nodeName)
+						return nil
+					}
+				}
+			}
+
+			framework.Logf("Waiting for AWS EBS %q to detach from %q.", diskName, nodeName)
+		}
+		return fmt.Errorf("Gave up waiting for AWS EBS %q to detach from %q after %v", diskName, nodeName, gcePDDetachTimeout)
 	}
 
 	return nil
