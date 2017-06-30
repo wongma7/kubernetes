@@ -180,7 +180,7 @@ func runLocalUtil(config *localTestConfig, nodeName, cmd string) {
 			hostBase: containerBase,
 		},
 		WaitForCompletion: true,
-		NodeName:          nodeName,
+		ServerNodeName:    nodeName,
 	})
 }
 
