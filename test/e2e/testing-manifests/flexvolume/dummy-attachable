@@ -71,7 +71,7 @@ op=$1
 
 if [ "$op" = "init" ]; then
 	debug "init $@"
-	log "{\"status\":\"Success\"}"
+	log "{\"status\":\"Success\",\"capabilities\":{\"attach\":true}}"
 	exit 0
 fi
 

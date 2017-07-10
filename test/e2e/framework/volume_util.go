@@ -85,9 +85,9 @@ type VolumeTestConfig struct {
 	// Wait for the pod to terminate successfully
 	// False indicates that the pod is long running
 	WaitForCompletion bool
-	// ServerNodeName to run server pod on.  Default is any node.
+	// ServerNodeName is the spec.nodeName to run server pod on.  Default is any node.
 	ServerNodeName string
-	// ClientNodeName to run client pod on.  Default is any node.
+	// ClientNodeName is the spec.nodeName to run client pod on.  Default is any node.
 	ClientNodeName string
 }
 
