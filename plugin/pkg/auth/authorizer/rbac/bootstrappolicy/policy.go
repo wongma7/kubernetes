@@ -121,11 +121,14 @@ func NodeRules() []rbac.PolicyRule {
 
 		// Needed for imagepullsecrets, rbd/ceph and secret volumes, and secrets in envs
 		// Needed for configmap volume and envs
-		// Use the NodeRestriction admission plugin to limit a node to get secrets/configmaps referenced by pods bound to itself.
+		// Use the Node authorization mode to limit a node to get secrets/configmaps referenced by pods bound to itself.
 		rbac.NewRule("get").Groups(legacyGroup).Resources("secrets", "configmaps").RuleOrDie(),
 		// Needed for persistent volumes
-		// Use the NodeRestriction admission plugin to limit a node to get pv/pvc objects referenced by pods bound to itself.
+		// Use the Node authorization mode to limit a node to get pv/pvc objects referenced by pods bound to itself.
 		rbac.NewRule("get").Groups(legacyGroup).Resources("persistentvolumeclaims", "persistentvolumes").RuleOrDie(),
+		// Use the Node authorization mode to limit a node to update status of pvc objects referenced by pods bound to itself.
+		// Use the NodeRestriction admission plugin to limit a node to just update the status stanza.
+		rbac.NewRule("get", "update", "patch").Groups(legacyGroup).Resources("persistentvolumeclaims/status").RuleOrDie(),
 		// TODO: add to the Node authorizer and restrict to endpoints referenced by pods or PVs bound to the node
 		// Needed for glusterfs volumes
 		rbac.NewRule("get").Groups(legacyGroup).Resources("endpoints").RuleOrDie(),

@@ -85,7 +85,11 @@ func (r *NodeAuthorizer) Authorize(attrs authorizer.Attributes) (bool, string, e
 		case configMapResource:
 			return r.authorizeGet(nodeName, configMapVertexType, attrs)
 		case pvcResource:
-			return r.authorizeGet(nodeName, pvcVertexType, attrs)
+			if attrs.GetSubresource() == "status" {
+				return r.authorizeStatusUpdate(nodeName, pvcVertexType, attrs)
+			} else {
+				return r.authorizeGet(nodeName, pvcVertexType, attrs)
+			}
 		case pvResource:
 			return r.authorizeGet(nodeName, pvVertexType, attrs)
 		}
@@ -95,16 +99,41 @@ func (r *NodeAuthorizer) Authorize(attrs authorizer.Attributes) (bool, string, e
 	return rbac.RulesAllow(attrs, r.nodeRules...), "", nil
 }
 
+// authorizeStatusUpdate authorizes get/update/patch requests to status subresources of the specified type if they are related to the specified node
+func (r *NodeAuthorizer) authorizeStatusUpdate(nodeName string, startingType vertexType, attrs authorizer.Attributes) (bool, string, error) {
+	switch attrs.GetVerb() {
+	case "get", "update", "patch":
+		// ok
+	default:
+		glog.V(2).Infof("NODE DENY: %s %#v", nodeName, attrs)
+		return false, "can only get/update/patch this type", nil
+	}
+
+	if attrs.GetSubresource() != "status" {
+		glog.V(2).Infof("NODE DENY: %s %#v", nodeName, attrs)
+		return false, "cannot get subresource", nil
+	}
+
+	return r.authorize(nodeName, startingType, attrs)
+}
+
 // authorizeGet authorizes "get" requests to objects of the specified type if they are related to the specified node
 func (r *NodeAuthorizer) authorizeGet(nodeName string, startingType vertexType, attrs authorizer.Attributes) (bool, string, error) {
-	if attrs.GetVerb() != "get" || len(attrs.GetName()) == 0 {
+	if attrs.GetVerb() != "get" {
 		glog.V(2).Infof("NODE DENY: %s %#v", nodeName, attrs)
 		return false, "can only get individual resources of this type", nil
 	}
-
 	if len(attrs.GetSubresource()) > 0 {
 		glog.V(2).Infof("NODE DENY: %s %#v", nodeName, attrs)
 		return false, "cannot get subresource", nil
+	}
+	return r.authorize(nodeName, startingType, attrs)
+}
+
+func (r *NodeAuthorizer) authorize(nodeName string, startingType vertexType, attrs authorizer.Attributes) (bool, string, error) {
+	if len(attrs.GetName()) == 0 {
+		glog.V(2).Infof("NODE DENY: %s %#v", nodeName, attrs)
+		return false, "can only get individual resources of this type", nil
 	}
 
 	ok, err := r.hasPathFrom(nodeName, startingType, attrs.GetNamespace(), attrs.GetName())

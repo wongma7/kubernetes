@@ -739,6 +739,14 @@ items:
   - apiGroups:
     - ""
     resources:
+    - persistentvolumeclaims/status
+    verbs:
+    - get
+    - patch
+    - update
+  - apiGroups:
+    - ""
+    resources:
     - endpoints
     verbs:
     - get
