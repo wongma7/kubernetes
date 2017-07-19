@@ -1141,6 +1141,7 @@ var map_PersistentVolumeClaimStatus = map[string]string{
 	"phase":       "Phase represents the current phase of PersistentVolumeClaim.",
 	"accessModes": "AccessModes contains the actual access modes the volume backing the PVC has. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#access-modes-1",
 	"capacity":    "Represents the actual resources of the underlying volume.",
+	"conditions":  "Current service state of PVC",
 }
 
 func (PersistentVolumeClaimStatus) SwaggerDoc() map[string]string {
@@ -1533,6 +1534,18 @@ var map_ProjectedVolumeSource = map[string]string{
 
 func (ProjectedVolumeSource) SwaggerDoc() map[string]string {
 	return map_ProjectedVolumeSource
+}
+
+var map_PvcCondition = map[string]string{
+	"":                   "PvcCondition contails details about state of pvc",
+	"lastProbeTime":      "Last time we probed the condition.",
+	"lastTransitionTime": "Last time the condition transitioned from one status to another.",
+	"reason":             "Unique, one-word, CamelCase reason for the condition's last transition.",
+	"message":            "Human-readable message indicating details about last transition.",
+}
+
+func (PvcCondition) SwaggerDoc() map[string]string {
+	return map_PvcCondition
 }
 
 var map_QuobyteVolumeSource = map[string]string{

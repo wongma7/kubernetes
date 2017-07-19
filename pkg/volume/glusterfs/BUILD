@@ -10,6 +10,7 @@ go_library(
     name = "go_default_library",
     srcs = [
         "doc.go",
+        "expander.go",
         "glusterfs.go",
         "glusterfs_minmax.go",
         "glusterfs_util.go",
