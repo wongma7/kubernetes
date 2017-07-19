@@ -16,6 +16,7 @@ go_library(
     ],
     tags = ["automanaged"],
     deps = [
+        "//pkg/controller/volume/expand/cache:go_default_library",
         "//pkg/features:go_default_library",
         "//pkg/kubelet/events:go_default_library",
         "//pkg/util/mount:go_default_library",
@@ -41,6 +42,7 @@ go_test(
     library = ":go_default_library",
     tags = ["automanaged"],
     deps = [
+        "//pkg/controller/volume/expand/cache:go_default_library",
         "//pkg/util/mount:go_default_library",
         "//pkg/volume:go_default_library",
         "//pkg/volume/util/types:go_default_library",
