@@ -11,8 +11,8 @@ go_library(
     name = "go_default_library",
     srcs = [
         "empty_dir_wrapper.go",
-        "framework.go",
         "flexvolume.go",
+        "framework.go",
         "pd.go",
         "persistent_volumes.go",
         "persistent_volumes-disruptive.go",

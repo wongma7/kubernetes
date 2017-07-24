@@ -66,22 +66,21 @@ func testFlexVolume(driver string, cs clientset.Interface, config framework.Volu
 // installFlex installs the driver found at filePath on the node and restarts
 // kubelet. If node is nil, installs on the master and restarts
 // controller-manager.
-func installFlex(node *v1.Node, vendor, driver, filePath string) {
+func installFlex(node *v1.Node, vendor, driver, filePath string) string {
 	flexDir := getFlexDir(node == nil, vendor, driver)
 	flexFile := path.Join(flexDir, driver)
 
-	host := ""
-	if node != nil {
-		host = framework.GetNodeExternalIP(node)
-	} else {
-		host = net.JoinHostPort(framework.GetMasterHost(), sshPort)
-	}
+	host := getNodeOrMasterHost(node)
 
 	cmd := fmt.Sprintf("sudo mkdir -p %s", flexDir)
 	sshAndLog(cmd, host)
 
 	data := generated.ReadOrDie(filePath)
 	cmd = fmt.Sprintf("sudo tee <<'EOF' %s\n%s\nEOF", flexFile, string(data))
+	sshAndLog(cmd, host)
+
+	flexLogFile := path.Join(flexDir, driver+".log")
+	cmd = fmt.Sprintf("sudo sed -i -e 's,${FLEX_DUMMY_LOG},%s,' %s", flexLogFile, flexFile)
 	sshAndLog(cmd, host)
 
 	cmd = fmt.Sprintf("sudo chmod +x %s", flexFile)
@@ -98,17 +97,14 @@ func installFlex(node *v1.Node, vendor, driver, filePath string) {
 		err = framework.WaitForControllerManagerUp()
 		framework.ExpectNoError(err)
 	}
+
+	return flexLogFile
 }
 
 func uninstallFlex(node *v1.Node, vendor, driver string) {
 	flexDir := getFlexDir(node == nil, vendor, driver)
 
-	host := ""
-	if node != nil {
-		host = framework.GetNodeExternalIP(node)
-	} else {
-		host = net.JoinHostPort(framework.GetMasterHost(), sshPort)
-	}
+	host := getNodeOrMasterHost(node)
 
 	cmd := fmt.Sprintf("sudo rm -r %s", flexDir)
 	sshAndLog(cmd, host)
@@ -125,13 +121,32 @@ func getFlexDir(master bool, vendor, driver string) string {
 	return flexDir
 }
 
-func sshAndLog(cmd, host string) {
+func getFlexLogContents(node *v1.Node, flexLogFile string) string {
+	host := getNodeOrMasterHost(node)
+
+	cmd := fmt.Sprintf("sudo cat %s", flexLogFile)
+	result := sshAndLog(cmd, host)
+	return result.Stdout
+}
+
+func sshAndLog(cmd, host string) framework.SSHResult {
 	result, err := framework.SSH(cmd, host, framework.TestContext.Provider)
 	framework.LogSSHResult(result)
 	framework.ExpectNoError(err)
 	if result.Code != 0 {
 		framework.Failf("%s returned non-zero, stderr: %s", cmd, result.Stderr)
 	}
+	return result
+}
+
+func getNodeOrMasterHost(node *v1.Node) string {
+	host := ""
+	if node != nil {
+		host = framework.GetNodeExternalIP(node)
+	} else {
+		host = net.JoinHostPort(framework.GetMasterHost(), sshPort)
+	}
+	return host
 }
 
 var _ = framework.KubeDescribe("Flexvolumes [Volume][Disruptive]", func() {
@@ -146,6 +161,7 @@ var _ = framework.KubeDescribe("Flexvolumes [Volume][Disruptive]", func() {
 	var node v1.Node
 	var config framework.VolumeTestConfig
 	var suffix string
+	var flexNodeLogFile, flexMasterLogFile string
 
 	BeforeEach(func() {
 		framework.SkipUnlessProviderIs("gce")
@@ -163,6 +179,17 @@ var _ = framework.KubeDescribe("Flexvolumes [Volume][Disruptive]", func() {
 			ClientNodeName: node.Name,
 		}
 		suffix = ns.Name
+		flexNodeLogFile = ""
+		flexMasterLogFile = ""
+	})
+
+	AfterEach(func() {
+		if flexNodeLogFile != "" {
+			framework.Logf("Node %s flex driver logs:\n"+getFlexLogContents(&node, flexNodeLogFile), node.Name)
+		}
+		if flexMasterLogFile != "" {
+			framework.Logf("Master flex driver logs:\n" + getFlexLogContents(nil, flexMasterLogFile))
+		}
 	})
 
 	It("should be mountable when non-attachable", func() {
@@ -170,7 +197,7 @@ var _ = framework.KubeDescribe("Flexvolumes [Volume][Disruptive]", func() {
 		driverInstallAs := driver + "-" + suffix
 
 		By(fmt.Sprintf("installing flexvolume %s on node %s as %s", path.Join(driverDir, driver), node.Name, driverInstallAs))
-		installFlex(&node, "k8s", driverInstallAs, path.Join(driverDir, driver))
+		flexNodeLogFile = installFlex(&node, "k8s", driverInstallAs, path.Join(driverDir, driver))
 
 		testFlexVolume(driverInstallAs, cs, config, f, clean)
 
@@ -188,9 +215,9 @@ var _ = framework.KubeDescribe("Flexvolumes [Volume][Disruptive]", func() {
 		driverInstallAs := driver + "-" + suffix
 
 		By(fmt.Sprintf("installing flexvolume %s on node %s as %s", path.Join(driverDir, driver), node.Name, driverInstallAs))
-		installFlex(&node, "k8s", driverInstallAs, path.Join(driverDir, driver))
+		flexNodeLogFile = installFlex(&node, "k8s", driverInstallAs, path.Join(driverDir, driver))
 		By(fmt.Sprintf("installing flexvolume %s on master as %s", path.Join(driverDir, driver), driverInstallAs))
-		installFlex(nil, "k8s", driverInstallAs, path.Join(driverDir, driver))
+		flexMasterLogFile = installFlex(nil, "k8s", driverInstallAs, path.Join(driverDir, driver))
 
 		testFlexVolume(driverInstallAs, cs, config, f, clean)
 
