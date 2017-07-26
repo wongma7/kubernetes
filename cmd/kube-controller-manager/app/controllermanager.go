@@ -337,6 +337,7 @@ func NewControllerInitializers() map[string]InitFunc {
 	controllers["route"] = startRouteController
 	controllers["persistentvolume-binder"] = startPersistentVolumeBinderController
 	controllers["attachdetach"] = startAttachDetachController
+	controllers["volume-expand"] = startVolumeExpandController
 
 	return controllers
 }
