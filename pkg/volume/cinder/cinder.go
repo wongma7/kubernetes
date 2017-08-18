@@ -241,7 +241,7 @@ type cdManager interface {
 	// Detaches the disk from the kubelet's host machine.
 	DetachDisk(unmounter *cinderVolumeUnmounter) error
 	// Creates a volume
-	CreateVolume(provisioner *cinderVolumeProvisioner) (volumeID string, volumeSizeGB int, labels map[string]string, fstype string, err error)
+	CreateVolume(provisioner *cinderVolumeProvisioner) (volumeID string, volumeSizeGB int, labels map[string]string, fstype string, mountOptions *string, err error)
 	// Deletes a volume
 	DeleteVolume(deleter *cinderVolumeDeleter) error
 }
@@ -486,7 +486,7 @@ func (c *cinderVolumeProvisioner) Provision() (*v1.PersistentVolume, error) {
 		return nil, fmt.Errorf("invalid AccessModes %v: only AccessModes %v are supported", c.options.PVC.Spec.AccessModes, c.plugin.GetAccessModes())
 	}
 
-	volumeID, sizeGB, labels, fstype, err := c.manager.CreateVolume(c)
+	volumeID, sizeGB, labels, fstype, mountOptions, err := c.manager.CreateVolume(c)
 	if err != nil {
 		return nil, err
 	}
@@ -512,6 +512,7 @@ func (c *cinderVolumeProvisioner) Provision() (*v1.PersistentVolume, error) {
 					ReadOnly: false,
 				},
 			},
+			MountOptions: mountOptions,
 		},
 	}
 	if len(c.options.PVC.Spec.AccessModes) == 0 {

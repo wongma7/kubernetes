@@ -137,6 +137,7 @@ func (a *azureFileProvisioner) Provision() (*v1.PersistentVolume, error) {
 	}
 
 	var sku, location, account string
+	var mountOptions *string
 
 	// File share name has a length limit of 63, and it cannot contain two consecutive '-'s.
 	name := volume.GenerateVolumeName(a.options.ClusterName, a.options.PVName, 63)
@@ -155,6 +156,8 @@ func (a *azureFileProvisioner) Provision() (*v1.PersistentVolume, error) {
 			location = v
 		case "storageaccount":
 			account = v
+		case volume.VolumeParameterMountOptions:
+			mountOptions = &v
 		default:
 			return nil, fmt.Errorf("invalid option %q for volume plugin %s", k, a.plugin.GetPluginName())
 		}
@@ -194,6 +197,7 @@ func (a *azureFileProvisioner) Provision() (*v1.PersistentVolume, error) {
 					ShareName:  name,
 				},
 			},
+			MountOptions: mountOptions,
 		},
 	}
 	return pv, nil

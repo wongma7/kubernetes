@@ -152,7 +152,7 @@ func (plugin *photonPersistentDiskPlugin) ConstructVolumeSpec(volumeSpecName, mo
 // Abstract interface to disk operations.
 type pdManager interface {
 	// Creates a volume
-	CreateVolume(provisioner *photonPersistentDiskProvisioner) (pdID string, volumeSizeGB int, fstype string, err error)
+	CreateVolume(provisioner *photonPersistentDiskProvisioner) (pdID string, volumeSizeGB int, fstype string, mountOptions *string, err error)
 	// Deletes a volume
 	DeleteVolume(deleter *photonPersistentDiskDeleter) error
 }
@@ -347,7 +347,7 @@ func (p *photonPersistentDiskProvisioner) Provision() (*v1.PersistentVolume, err
 		return nil, fmt.Errorf("invalid AccessModes %v: only AccessModes %v are supported", p.options.PVC.Spec.AccessModes, p.plugin.GetAccessModes())
 	}
 
-	pdID, sizeGB, fstype, err := p.manager.CreateVolume(p)
+	pdID, sizeGB, fstype, mountOptions, err := p.manager.CreateVolume(p)
 	if err != nil {
 		return nil, err
 	}
@@ -376,6 +376,7 @@ func (p *photonPersistentDiskProvisioner) Provision() (*v1.PersistentVolume, err
 					FSType: fstype,
 				},
 			},
+			MountOptions: mountOptions,
 		},
 	}
 	if len(p.options.PVC.Spec.AccessModes) == 0 {

@@ -244,7 +244,7 @@ func (plugin *awsElasticBlockStorePlugin) ConstructVolumeSpec(volName, mountPath
 
 // Abstract interface to PD operations.
 type ebsManager interface {
-	CreateVolume(provisioner *awsElasticBlockStoreProvisioner) (volumeID aws.KubernetesVolumeID, volumeSizeGB int, labels map[string]string, fstype string, err error)
+	CreateVolume(provisioner *awsElasticBlockStoreProvisioner) (volumeID aws.KubernetesVolumeID, volumeSizeGB int, labels map[string]string, fstype string, mountOptions *string, err error)
 	// Deletes a volume
 	DeleteVolume(deleter *awsElasticBlockStoreDeleter) error
 }
@@ -434,7 +434,7 @@ func (c *awsElasticBlockStoreProvisioner) Provision() (*v1.PersistentVolume, err
 		return nil, fmt.Errorf("invalid AccessModes %v: only AccessModes %v are supported", c.options.PVC.Spec.AccessModes, c.plugin.GetAccessModes())
 	}
 
-	volumeID, sizeGB, labels, fstype, err := c.manager.CreateVolume(c)
+	volumeID, sizeGB, labels, fstype, mountOptions, err := c.manager.CreateVolume(c)
 	if err != nil {
 		glog.Errorf("Provision failed: %v", err)
 		return nil, err
@@ -466,6 +466,7 @@ func (c *awsElasticBlockStoreProvisioner) Provision() (*v1.PersistentVolume, err
 					ReadOnly:  false,
 				},
 			},
+			MountOptions: mountOptions,
 		},
 	}
 

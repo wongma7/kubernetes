@@ -422,6 +422,7 @@ type provisionerConfig struct {
 	gidMax          int
 	volumeType      gapi.VolumeDurabilityInfo
 	volumeOptions   []string
+	mountOptions    *string
 }
 
 type glusterfsVolumeProvisioner struct {
@@ -720,6 +721,7 @@ func (p *glusterfsVolumeProvisioner) Provision() (*v1.PersistentVolume, error) {
 	if len(pv.Spec.AccessModes) == 0 {
 		pv.Spec.AccessModes = p.plugin.GetAccessModes()
 	}
+	pv.Spec.MountOptions = cfg.mountOptions
 
 	gidStr := strconv.FormatInt(int64(gid), 10)
 
@@ -972,6 +974,8 @@ func parseClassParameters(params map[string]string, kubeClient clientset.Interfa
 			if len(v) != 0 {
 				parseVolumeOptions = v
 			}
+		case volume.VolumeParameterMountOptions:
+			cfg.mountOptions = &v
 
 		default:
 			return nil, fmt.Errorf("glusterfs: invalid option %q for volume plugin %s", k, glusterfsPluginName)

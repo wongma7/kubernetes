@@ -71,10 +71,10 @@ func (util *GCEDiskUtil) DeleteVolume(d *gcePersistentDiskDeleter) error {
 
 // CreateVolume creates a GCE PD.
 // Returns: volumeID, volumeSizeGB, labels, error
-func (gceutil *GCEDiskUtil) CreateVolume(c *gcePersistentDiskProvisioner) (string, int, map[string]string, string, error) {
+func (gceutil *GCEDiskUtil) CreateVolume(c *gcePersistentDiskProvisioner) (string, int, map[string]string, string, *string, error) {
 	cloud, err := getCloudProvider(c.gcePersistentDisk.plugin.host.GetCloudProvider())
 	if err != nil {
-		return "", 0, nil, "", err
+		return "", 0, nil, "", nil, err
 	}
 
 	name := volume.GenerateVolumeName(c.options.ClusterName, c.options.PVName, 63) // GCE PD name can have up to 63 characters
@@ -91,6 +91,7 @@ func (gceutil *GCEDiskUtil) CreateVolume(c *gcePersistentDiskProvisioner) (strin
 	zonePresent := false
 	zonesPresent := false
 	fstype := ""
+	var mountOptions *string
 	for k, v := range c.options.Parameters {
 		switch strings.ToLower(k) {
 		case "type":
@@ -103,18 +104,20 @@ func (gceutil *GCEDiskUtil) CreateVolume(c *gcePersistentDiskProvisioner) (strin
 			configuredZones = v
 		case volume.VolumeParameterFSType:
 			fstype = v
+		case volume.VolumeParameterMountOptions:
+			mountOptions = &v
 		default:
-			return "", 0, nil, "", fmt.Errorf("invalid option %q for volume plugin %s", k, c.plugin.GetPluginName())
+			return "", 0, nil, "", nil, fmt.Errorf("invalid option %q for volume plugin %s", k, c.plugin.GetPluginName())
 		}
 	}
 
 	if zonePresent && zonesPresent {
-		return "", 0, nil, "", fmt.Errorf("both zone and zones StorageClass parameters must not be used at the same time")
+		return "", 0, nil, "", nil, fmt.Errorf("both zone and zones StorageClass parameters must not be used at the same time")
 	}
 
 	// TODO: implement PVC.Selector parsing
 	if c.options.PVC.Spec.Selector != nil {
-		return "", 0, nil, "", fmt.Errorf("claim.Spec.Selector is not supported for dynamic provisioning on GCE")
+		return "", 0, nil, "", nil, fmt.Errorf("claim.Spec.Selector is not supported for dynamic provisioning on GCE")
 	}
 
 	var zones sets.String
@@ -122,17 +125,17 @@ func (gceutil *GCEDiskUtil) CreateVolume(c *gcePersistentDiskProvisioner) (strin
 		zones, err = cloud.GetAllZones()
 		if err != nil {
 			glog.V(2).Infof("error getting zone information from GCE: %v", err)
-			return "", 0, nil, "", err
+			return "", 0, nil, "", nil, err
 		}
 	}
 	if !zonePresent && zonesPresent {
 		if zones, err = volume.ZonesToSet(configuredZones); err != nil {
-			return "", 0, nil, "", err
+			return "", 0, nil, "", nil, err
 		}
 	}
 	if zonePresent && !zonesPresent {
 		if err := volume.ValidateZone(configuredZone); err != nil {
-			return "", 0, nil, "", err
+			return "", 0, nil, "", nil, err
 		}
 		zones = make(sets.String)
 		zones.Insert(configuredZone)
@@ -142,7 +145,7 @@ func (gceutil *GCEDiskUtil) CreateVolume(c *gcePersistentDiskProvisioner) (strin
 	err = cloud.CreateDisk(name, diskType, zone, int64(requestGB), *c.options.CloudTags)
 	if err != nil {
 		glog.V(2).Infof("Error creating GCE PD volume: %v", err)
-		return "", 0, nil, "", err
+		return "", 0, nil, "", nil, err
 	}
 	glog.V(2).Infof("Successfully created GCE PD volume %s", name)
 
@@ -152,7 +155,7 @@ func (gceutil *GCEDiskUtil) CreateVolume(c *gcePersistentDiskProvisioner) (strin
 		glog.Errorf("error getting labels for volume %q: %v", name, err)
 	}
 
-	return name, int(requestGB), labels, fstype, nil
+	return name, int(requestGB), labels, fstype, mountOptions, nil
 }
 
 // Returns the first path that exists, or empty string if none exist.

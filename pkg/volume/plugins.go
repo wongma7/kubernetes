@@ -40,6 +40,11 @@ const (
 	// Must be a filesystem type supported by the host operating system.
 	// Ex. "ext4", "xfs", "ntfs". Default value depends on the provisioner
 	VolumeParameterFSType = "fstype"
+	// Common parameter which can be specified in StorageClass to specify the desired MountOptions
+	// Provisioners SHOULD implement support for this if they already SupportsMountOption()
+	// The value should not be validated by the provisioner, instead it should be copied directly
+	// to the PV so that if an option is invalid, mount will fail.
+	VolumeParameterMountOptions = "mountoptions"
 )
 
 // VolumeOptions contains option information about a volume.

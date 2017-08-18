@@ -211,7 +211,7 @@ func (plugin *gcePersistentDiskPlugin) ConstructVolumeSpec(volumeName, mountPath
 // Abstract interface to PD operations.
 type pdManager interface {
 	// Creates a volume
-	CreateVolume(provisioner *gcePersistentDiskProvisioner) (volumeID string, volumeSizeGB int, labels map[string]string, fstype string, err error)
+	CreateVolume(provisioner *gcePersistentDiskProvisioner) (volumeID string, volumeSizeGB int, labels map[string]string, fstype string, mountOptions *string, err error)
 	// Deletes a volume
 	DeleteVolume(deleter *gcePersistentDiskDeleter) error
 }
@@ -379,7 +379,7 @@ func (c *gcePersistentDiskProvisioner) Provision() (*v1.PersistentVolume, error)
 		return nil, fmt.Errorf("invalid AccessModes %v: only AccessModes %v are supported", c.options.PVC.Spec.AccessModes, c.plugin.GetAccessModes())
 	}
 
-	volumeID, sizeGB, labels, fstype, err := c.manager.CreateVolume(c)
+	volumeID, sizeGB, labels, fstype, mountOptions, err := c.manager.CreateVolume(c)
 	if err != nil {
 		return nil, err
 	}
@@ -410,6 +410,7 @@ func (c *gcePersistentDiskProvisioner) Provision() (*v1.PersistentVolume, error)
 					FSType:    fstype,
 				},
 			},
+			MountOptions: mountOptions,
 		},
 	}
 	if len(c.options.PVC.Spec.AccessModes) == 0 {

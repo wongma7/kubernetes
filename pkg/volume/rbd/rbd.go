@@ -289,6 +289,7 @@ func (r *rbdVolumeProvisioner) Provision() (*v1.PersistentVolume, error) {
 	secret := ""
 	imageFormat := rbdImageFormat1
 	fstype := ""
+	var mountOptions *string
 
 	for k, v := range r.options.Parameters {
 		switch dstrings.ToLower(k) {
@@ -322,6 +323,8 @@ func (r *rbdVolumeProvisioner) Provision() (*v1.PersistentVolume, error) {
 			}
 		case volume.VolumeParameterFSType:
 			fstype = v
+		case volume.VolumeParameterMountOptions:
+			mountOptions = &v
 		default:
 			return nil, fmt.Errorf("invalid option %q for volume plugin %s", k, r.plugin.GetPluginName())
 		}
@@ -379,6 +382,7 @@ func (r *rbdVolumeProvisioner) Provision() (*v1.PersistentVolume, error) {
 	pv.Spec.Capacity = v1.ResourceList{
 		v1.ResourceName(v1.ResourceStorage): resource.MustParse(fmt.Sprintf("%dMi", sizeMB)),
 	}
+	pv.Spec.MountOptions = mountOptions
 	return pv, nil
 }
 

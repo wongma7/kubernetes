@@ -68,6 +68,7 @@ type VolumeSpec struct {
 	Path              string
 	Size              int
 	Fstype            string
+	MountOptions      *string
 	StoragePolicyID   string
 	StoragePolicyName string
 }
@@ -85,6 +86,7 @@ func verifyDevicePath(path string) (string, error) {
 // CreateVolume creates a vSphere volume.
 func (util *VsphereDiskUtil) CreateVolume(v *vsphereVolumeProvisioner) (volSpec *VolumeSpec, err error) {
 	var fstype string
+	var mountOptions *string
 	cloud, err := getCloudProvider(v.plugin.host.GetCloudProvider())
 	if err != nil {
 		return nil, err
@@ -112,6 +114,8 @@ func (util *VsphereDiskUtil) CreateVolume(v *vsphereVolumeProvisioner) (volSpec 
 		case volume.VolumeParameterFSType:
 			fstype = value
 			glog.V(4).Infof("Setting fstype as %q", fstype)
+		case volume.VolumeParameterMountOptions:
+			mountOptions = &value
 		case StoragePolicyName:
 			volumeOptions.StoragePolicyName = value
 			glog.V(4).Infof("Setting StoragePolicyName as %q", volumeOptions.StoragePolicyName)
@@ -148,6 +152,7 @@ func (util *VsphereDiskUtil) CreateVolume(v *vsphereVolumeProvisioner) (volSpec 
 		Path:              vmDiskPath,
 		Size:              volSizeKB,
 		Fstype:            fstype,
+		MountOptions:      mountOptions,
 		StoragePolicyName: volumeOptions.StoragePolicyName,
 		StoragePolicyID:   volumeOptions.StoragePolicyID,
 	}

@@ -65,10 +65,10 @@ func (util *AWSDiskUtil) DeleteVolume(d *awsElasticBlockStoreDeleter) error {
 
 // CreateVolume creates an AWS EBS volume.
 // Returns: volumeID, volumeSizeGB, labels, error
-func (util *AWSDiskUtil) CreateVolume(c *awsElasticBlockStoreProvisioner) (aws.KubernetesVolumeID, int, map[string]string, string, error) {
+func (util *AWSDiskUtil) CreateVolume(c *awsElasticBlockStoreProvisioner) (aws.KubernetesVolumeID, int, map[string]string, string, *string, error) {
 	cloud, err := getCloudProvider(c.awsElasticBlockStore.plugin.host.GetCloudProvider())
 	if err != nil {
-		return "", 0, nil, "", err
+		return "", 0, nil, "", nil, err
 	}
 
 	// AWS volumes don't have Name field, store the name in Name tag
@@ -90,6 +90,7 @@ func (util *AWSDiskUtil) CreateVolume(c *awsElasticBlockStoreProvisioner) (aws.K
 		PVCName:    c.options.PVC.Name,
 	}
 	fstype := ""
+	var mountOptions *string
 	// Apply Parameters (case-insensitive). We leave validation of
 	// the values to the cloud provider.
 	volumeOptions.ZonePresent = false
@@ -107,35 +108,37 @@ func (util *AWSDiskUtil) CreateVolume(c *awsElasticBlockStoreProvisioner) (aws.K
 		case "iopspergb":
 			volumeOptions.IOPSPerGB, err = strconv.Atoi(v)
 			if err != nil {
-				return "", 0, nil, "", fmt.Errorf("invalid iopsPerGB value %q, must be integer between 1 and 30: %v", v, err)
+				return "", 0, nil, "", nil, fmt.Errorf("invalid iopsPerGB value %q, must be integer between 1 and 30: %v", v, err)
 			}
 		case "encrypted":
 			volumeOptions.Encrypted, err = strconv.ParseBool(v)
 			if err != nil {
-				return "", 0, nil, "", fmt.Errorf("invalid encrypted boolean value %q, must be true or false: %v", v, err)
+				return "", 0, nil, "", nil, fmt.Errorf("invalid encrypted boolean value %q, must be true or false: %v", v, err)
 			}
 		case "kmskeyid":
 			volumeOptions.KmsKeyId = v
 		case volume.VolumeParameterFSType:
 			fstype = v
+		case volume.VolumeParameterMountOptions:
+			mountOptions = &v
 		default:
-			return "", 0, nil, "", fmt.Errorf("invalid option %q for volume plugin %s", k, c.plugin.GetPluginName())
+			return "", 0, nil, "", nil, fmt.Errorf("invalid option %q for volume plugin %s", k, c.plugin.GetPluginName())
 		}
 	}
 
 	if volumeOptions.ZonePresent && volumeOptions.ZonesPresent {
-		return "", 0, nil, "", fmt.Errorf("both zone and zones StorageClass parameters must not be used at the same time")
+		return "", 0, nil, "", nil, fmt.Errorf("both zone and zones StorageClass parameters must not be used at the same time")
 	}
 
 	// TODO: implement PVC.Selector parsing
 	if c.options.PVC.Spec.Selector != nil {
-		return "", 0, nil, "", fmt.Errorf("claim.Spec.Selector is not supported for dynamic provisioning on AWS")
+		return "", 0, nil, "", nil, fmt.Errorf("claim.Spec.Selector is not supported for dynamic provisioning on AWS")
 	}
 
 	name, err := cloud.CreateDisk(volumeOptions)
 	if err != nil {
 		glog.V(2).Infof("Error creating EBS Disk volume: %v", err)
-		return "", 0, nil, "", err
+		return "", 0, nil, "", nil, err
 	}
 	glog.V(2).Infof("Successfully created EBS Disk volume %s", name)
 
@@ -145,7 +148,7 @@ func (util *AWSDiskUtil) CreateVolume(c *awsElasticBlockStoreProvisioner) (aws.K
 		glog.Errorf("error building labels for new EBS volume %q: %v", name, err)
 	}
 
-	return name, int(requestGB), labels, fstype, nil
+	return name, int(requestGB), labels, fstype, mountOptions, nil
 }
 
 // Returns the first path that exists, or empty string if none exist.

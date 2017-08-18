@@ -366,6 +366,7 @@ func (provisioner *quobyteVolumeProvisioner) Provision() (*v1.PersistentVolume, 
 	provisioner.config = "BASE"
 	provisioner.tenant = "DEFAULT"
 	createQuota := false
+	var mountOptions *string
 
 	cfg, err := parseAPIConfig(provisioner.plugin, provisioner.options.Parameters)
 	if err != nil {
@@ -389,6 +390,8 @@ func (provisioner *quobyteVolumeProvisioner) Provision() (*v1.PersistentVolume, 
 			"adminsecretnamespace",
 			"quobyteapiserver":
 			continue
+		case volume.VolumeParameterMountOptions:
+			mountOptions = &v
 		default:
 			return nil, fmt.Errorf("invalid option %q for volume plugin %s", k, provisioner.plugin.GetPluginName())
 		}
@@ -420,6 +423,7 @@ func (provisioner *quobyteVolumeProvisioner) Provision() (*v1.PersistentVolume, 
 	pv.Spec.Capacity = v1.ResourceList{
 		v1.ResourceName(v1.ResourceStorage): resource.MustParse(fmt.Sprintf("%dGi", sizeGB)),
 	}
+	pv.Spec.MountOptions = mountOptions
 	return pv, nil
 }
 
