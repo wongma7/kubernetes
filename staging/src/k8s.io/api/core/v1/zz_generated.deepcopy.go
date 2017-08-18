@@ -3752,6 +3752,15 @@ func (in *PersistentVolumeSpec) DeepCopyInto(out *PersistentVolumeSpec) {
 			**out = **in
 		}
 	}
+	if in.MountOptions != nil {
+		in, out := &in.MountOptions, &out.MountOptions
+		if *in == nil {
+			*out = nil
+		} else {
+			*out = new(string)
+			**out = **in
+		}
+	}
 	return
 }
 

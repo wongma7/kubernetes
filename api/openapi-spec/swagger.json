@@ -60476,6 +60476,10 @@
       "description": "Local represents directly-attached storage with node affinity",
       "$ref": "#/definitions/io.k8s.api.core.v1.LocalVolumeSource"
      },
+     "mountOptions": {
+      "description": "A comma-separated list of mount options. Not validated--mount will simply fail if one is invalid. More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes/#mount-options",
+      "type": "string"
+     },
      "nfs": {
       "description": "NFS represents an NFS mount on the host. Provisioned by an admin. More info: https://kubernetes.io/docs/concepts/storage/volumes#nfs",
       "$ref": "#/definitions/io.k8s.api.core.v1.NFSVolumeSource"
