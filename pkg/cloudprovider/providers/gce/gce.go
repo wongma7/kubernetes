@@ -125,6 +125,9 @@ type ServiceManager interface {
 	// Deletes the persistent disk from GCE with the given diskName.
 	DeleteDisk(project string, zone string, disk string) (*compute.Operation, error)
 
+	// Resizes the persistent disk on GCE with the given diskName.
+	ResizeDisk(project string, zone string, disk string, disksResizeRequest *compute.DisksResizeRequest) (*compute.Operation, error)
+
 	// Waits until GCE reports the given operation in the given zone as done.
 	WaitForZoneOp(op *compute.Operation, zone string, mc *metricContext) error
 }
@@ -553,6 +556,15 @@ func (manager *GCEServiceManager) DeleteDisk(
 	diskName string) (*compute.Operation, error) {
 
 	return manager.gce.service.Disks.Delete(project, zone, diskName).Do()
+}
+
+func (manager *GCEServiceManager) ResizeDisk(
+	project string,
+	zone string,
+	diskName string,
+	disksResizeRequest *compute.DisksResizeRequest) (*compute.Operation, error) {
+
+	return manager.gce.service.Disks.Resize(project, zone, diskName, disksResizeRequest).Do()
 }
 
 func (manager *GCEServiceManager) WaitForZoneOp(op *compute.Operation, zone string, mc *metricContext) error {

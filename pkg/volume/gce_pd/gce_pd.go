@@ -47,6 +47,7 @@ var _ volume.VolumePlugin = &gcePersistentDiskPlugin{}
 var _ volume.PersistentVolumePlugin = &gcePersistentDiskPlugin{}
 var _ volume.DeletableVolumePlugin = &gcePersistentDiskPlugin{}
 var _ volume.ProvisionableVolumePlugin = &gcePersistentDiskPlugin{}
+var _ volume.ExpandableVolumePlugin = &gcePersistentDiskPlugin{}
 
 const (
 	gcePersistentDiskPluginName = "kubernetes.io/gce-pd"
@@ -187,6 +188,19 @@ func (plugin *gcePersistentDiskPlugin) newProvisionerInternal(options volume.Vol
 			plugin:  plugin,
 		},
 		options: options,
+	}, nil
+}
+
+func (plugin *gcePersistentDiskPlugin) NewExpander() (volume.Expander, error) {
+	return plugin.newExpanderInternal(&GCEDiskUtil{})
+}
+
+func (plugin *gcePersistentDiskPlugin) newExpanderInternal(manager pdManager) (volume.Expander, error) {
+	return &gcePersistentDiskExpander{
+		gcePersistentDisk: &gcePersistentDisk{
+			manager: manager,
+			plugin:  plugin,
+		},
 	}, nil
 }
 
@@ -426,4 +440,26 @@ func (c *gcePersistentDiskProvisioner) Provision() (*v1.PersistentVolume, error)
 	}
 
 	return pv, nil
+}
+
+type gcePersistentDiskExpander struct {
+	*gcePersistentDisk
+}
+
+var _ volume.Expander = &gcePersistentDiskExpander{}
+
+func (e *gcePersistentDiskExpander) ExpandVolumeDevice(spec *volume.Spec, newSize resource.Quantity, oldSize resource.Quantity) error {
+	cloud, err := getCloudProvider(e.gcePersistentDisk.plugin.host.GetCloudProvider())
+	if err != nil {
+		return err
+	}
+	requestBytes := newSize.Value()
+	// GCE works with gigabytes, convert to GiB with rounding up
+	requestGB := volume.RoundUpSize(requestBytes, 1024*1024*1024)
+
+	return cloud.ResizeDisk(e.pdName, requestGB)
+}
+
+func (e *gcePersistentDiskExpander) RequiresFSResize() bool {
+	return true
 }
