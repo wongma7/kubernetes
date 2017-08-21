@@ -51,7 +51,7 @@ type DesiredStateOfWorld interface {
 	// added.
 	// If a pod with the same unique name already exists under the specified
 	// volume, this is a no-op.
-	AddPodToVolume(podName types.UniquePodName, pod *v1.Pod, volumeSpec *volume.Spec, outerVolumeSpecName string, volumeGidValue string) (v1.UniqueVolumeName, error)
+	AddPodToVolume(podName types.UniquePodName, pod *v1.Pod, volumeSpec *volume.Spec, pvc *v1.PersistentVolumeClaim, outerVolumeSpecName string, volumeGidValue string) (v1.UniqueVolumeName, error)
 
 	// MarkVolumesReportedInUse sets the ReportedInUse value to true for the
 	// reportedVolumes. For volumes not in the reportedVolumes list, the
@@ -166,6 +166,11 @@ type podToMount struct {
 	// PVC volumes it is from the dereferenced PV object.
 	spec *volume.Spec
 
+	// PVC the pod uses to reference the volume. nil for non-PVC volumes. Used
+	// as the mechanism for filesystem resize: if pvc.status.capacity is less
+	// than pv.spec.capacity, mount procedure will entail filesystem resize.
+	pvc *v1.PersistentVolumeClaim
+
 	// outerVolumeSpecName is the volume.Spec.Name() of the volume as referenced
 	// directly in the pod. If the volume was referenced through a persistent
 	// volume claim, this contains the volume.Spec.Name() of the persistent
@@ -177,6 +182,7 @@ func (dsw *desiredStateOfWorld) AddPodToVolume(
 	podName types.UniquePodName,
 	pod *v1.Pod,
 	volumeSpec *volume.Spec,
+	pvc *v1.PersistentVolumeClaim,
 	outerVolumeSpecName string,
 	volumeGidValue string) (v1.UniqueVolumeName, error) {
 	dsw.Lock()
@@ -232,6 +238,7 @@ func (dsw *desiredStateOfWorld) AddPodToVolume(
 		podName:             podName,
 		pod:                 pod,
 		spec:                volumeSpec,
+		pvc:                 pvc,
 		outerVolumeSpecName: outerVolumeSpecName,
 	}
 
@@ -333,6 +340,7 @@ func (dsw *desiredStateOfWorld) GetVolumesToMount() []VolumeToMount {
 						PodName:             podName,
 						Pod:                 podObj.pod,
 						VolumeSpec:          podObj.spec,
+						PVC:                 podObj.pvc,
 						PluginIsAttachable:  volumeObj.pluginIsAttachable,
 						OuterVolumeSpecName: podObj.outerVolumeSpecName,
 						VolumeGidValue:      volumeObj.volumeGidValue,

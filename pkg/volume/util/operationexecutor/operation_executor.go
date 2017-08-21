@@ -287,6 +287,11 @@ type VolumeToMount struct {
 	// InnerVolumeSpecName.
 	VolumeSpec *volume.Spec
 
+	// PVC the pod uses to reference the volume. nil for non-PVC volumes. Used
+	// as the mechanism for filesystem resize: if pvc.status.capacity is less
+	// than pv.spec.capacity, mount procedure will entail filesystem resize.
+	PVC *v1.PersistentVolumeClaim
+
 	// outerVolumeSpecName is the podSpec.Volume[x].Name of the volume. If the
 	// volume was referenced through a persistent volume claim, this contains
 	// the podSpec.Volume[x].Name of the persistent volume claim.
