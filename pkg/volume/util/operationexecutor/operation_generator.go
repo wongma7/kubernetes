@@ -406,6 +406,14 @@ func (og *operationGenerator) GenerateMountVolumeFunc(
 	}
 
 	return func() error {
+		if volumeToMount.PVC != nil {
+			pvcStatusCap := volumeToMount.PVC.Status.Capacity[v1.ResourceStorage]
+			pvSpecCap := volumeToMount.VolumeSpec.PersistentVolume.Spec.Capacity[v1.ResourceStorage]
+			if pvcStatusCap.Value() < pvSpecCap.Value() {
+				//TODO resize
+			}
+		}
+
 		if volumeAttacher != nil {
 			// Wait for attachable volumes to finish attaching
 			glog.Infof(volumeToMount.GenerateMsgDetailed("MountVolume.WaitForAttach entering", fmt.Sprintf("DevicePath %q", volumeToMount.DevicePath)))
