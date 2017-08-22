@@ -159,7 +159,7 @@ if [[ "${MASTER_OS_DISTRIBUTION}" == "gci" ]]; then
 fi
 # Set flex dir to one that's readable from kubelet and writable by the flex e2e test.
 if [[ "${NODE_OS_DISTRIBUTION}" == "gci" ]] || ([[ "${MASTER_OS_DISTRIBUTION}" == "gci" ]] && [[ "${REGISTER_MASTER_KUBELET}" == "false" ]]); then
-    KUBELET_TEST_VOLUME_PLUGIN_DIR="--volume-plugin-dir=/etc/srv/kubernetes/kubelet-plugins/volume/exec"
+    VOLUME_PLUGIN_DIR="/etc/srv/kubernetes/kubelet-plugins/volume/exec"
 fi
 
 TEST_CLUSTER_DELETE_COLLECTION_WORKERS="${TEST_CLUSTER_DELETE_COLLECTION_WORKERS:---delete-collection-workers=1}"
@@ -169,7 +169,7 @@ TEST_CLUSTER_RESYNC_PERIOD="${TEST_CLUSTER_RESYNC_PERIOD:---min-resync-period=3m
 # ContentType used by all components to communicate with apiserver.
 TEST_CLUSTER_API_CONTENT_TYPE="${TEST_CLUSTER_API_CONTENT_TYPE:-}"
 
-KUBELET_TEST_ARGS="${KUBELET_TEST_ARGS:-} --max-pods=110 --serialize-image-pulls=false ${TEST_CLUSTER_API_CONTENT_TYPE} ${KUBELET_TEST_VOLUME_PLUGIN_DIR:-}"
+KUBELET_TEST_ARGS="${KUBELET_TEST_ARGS:-} --max-pods=110 --serialize-image-pulls=false ${TEST_CLUSTER_API_CONTENT_TYPE}:-}"
 if [[ "${NODE_OS_DISTRIBUTION}" == "gci" ]] || [[ "${NODE_OS_DISTRIBUTION}" == "ubuntu" ]]; then
   NODE_KUBELET_TEST_ARGS=" --experimental-kernel-memcg-notification=true"
 fi
