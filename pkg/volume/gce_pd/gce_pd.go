@@ -191,17 +191,18 @@ func (plugin *gcePersistentDiskPlugin) newProvisionerInternal(options volume.Vol
 	}, nil
 }
 
-func (plugin *gcePersistentDiskPlugin) NewExpander() (volume.Expander, error) {
-	return plugin.newExpanderInternal(&GCEDiskUtil{})
+func (plugin *gcePersistentDiskPlugin) NewExpander(spec *volume.Spec) (volume.Expander, error) {
+	return plugin.newExpanderInternal(spec, &GCEDiskUtil{})
 }
 
-func (plugin *gcePersistentDiskPlugin) newExpanderInternal(manager pdManager) (volume.Expander, error) {
+func (plugin *gcePersistentDiskPlugin) newExpanderInternal(spec *volume.Spec, manager pdManager) (volume.Expander, error) {
 	return &gcePersistentDiskExpander{
 		gcePersistentDisk: &gcePersistentDisk{
+			volName: spec.Name(),
+			pdName:  spec.PersistentVolume.Spec.GCEPersistentDisk.PDName,
 			manager: manager,
 			plugin:  plugin,
-		},
-	}, nil
+		}}, nil
 }
 
 func (plugin *gcePersistentDiskPlugin) ConstructVolumeSpec(volumeName, mountPath string) (*volume.Spec, error) {
@@ -448,7 +449,7 @@ type gcePersistentDiskExpander struct {
 
 var _ volume.Expander = &gcePersistentDiskExpander{}
 
-func (e *gcePersistentDiskExpander) ExpandVolumeDevice(spec *volume.Spec, newSize resource.Quantity, oldSize resource.Quantity) error {
+func (e *gcePersistentDiskExpander) ExpandVolumeDevice(newSize resource.Quantity, oldSize resource.Quantity) error {
 	cloud, err := getCloudProvider(e.gcePersistentDisk.plugin.host.GetCloudProvider())
 	if err != nil {
 		return err
