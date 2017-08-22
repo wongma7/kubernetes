@@ -32,6 +32,7 @@ import (
 	"k8s.io/kubernetes/pkg/features"
 	kevents "k8s.io/kubernetes/pkg/kubelet/events"
 	"k8s.io/kubernetes/pkg/util/mount"
+	"k8s.io/kubernetes/pkg/util/resizefs"
 	"k8s.io/kubernetes/pkg/volume"
 	"k8s.io/kubernetes/pkg/volume/util"
 	"k8s.io/kubernetes/pkg/volume/util/volumehelper"
@@ -74,7 +75,7 @@ func NewOperationGenerator(kubeClient clientset.Interface,
 // OperationGenerator interface that extracts out the functions from operation_executor to make it dependency injectable
 type OperationGenerator interface {
 	// Generates the MountVolume function needed to perform the mount of a volume plugin
-	GenerateMountVolumeFunc(waitForAttachTimeout time.Duration, volumeToMount VolumeToMount, actualStateOfWorldMounterUpdater ActualStateOfWorldMounterUpdater, isRemount bool) (func() error, string, error)
+	GenerateMountVolumeFunc(waitForAttachTimeout time.Duration, volumeToMount VolumeToMount, actualStateOfWorldMounterUpdater ActualStateOfWorldMounterUpdater, isRemount bool, mounter mount.Interface) (func() error, string, error)
 
 	// Generates the UnmountVolume function needed to perform the unmount of a volume plugin
 	GenerateUnmountVolumeFunc(volumeToUnmount MountedVolume, actualStateOfWorld ActualStateOfWorldMounterUpdater) (func() error, string, error)
@@ -367,7 +368,8 @@ func (og *operationGenerator) GenerateMountVolumeFunc(
 	waitForAttachTimeout time.Duration,
 	volumeToMount VolumeToMount,
 	actualStateOfWorld ActualStateOfWorldMounterUpdater,
-	isRemount bool) (func() error, string, error) {
+	isRemount bool,
+	mounter mount.Interface) (func() error, string, error) {
 	// Get mounter plugin
 	volumePlugin, err :=
 		og.volumePluginMgr.FindPluginBySpec(volumeToMount.VolumeSpec)
@@ -404,6 +406,14 @@ func (og *operationGenerator) GenerateMountVolumeFunc(
 		volumeAttacher, _ = attachableVolumePlugin.NewAttacher()
 	}
 
+	// Get expander, if possible
+	expandableVolumePlugin, _ :=
+		og.volumePluginMgr.FindExpandablePluginBySpec(volumeToMount.VolumeSpec)
+	var volumeExpander volume.Expander
+	if expandableVolumePlugin != nil {
+		volumeExpander, _ = expandableVolumePlugin.NewExpander(volumeToMount.VolumeSpec)
+	}
+
 	var fsGroup *int64
 	if volumeToMount.Pod.Spec.SecurityContext != nil &&
 		volumeToMount.Pod.Spec.SecurityContext.FSGroup != nil {
@@ -423,6 +433,39 @@ func (og *operationGenerator) GenerateMountVolumeFunc(
 			}
 
 			glog.Infof(volumeToMount.GenerateMsgDetailed("MountVolume.WaitForAttach succeeded", ""))
+
+			if volumeExpander != nil && volumeExpander.RequiresFSResize() && volumeToMount.VolumeSpec.PersistentVolume != nil {
+				// The volume is a PV and Expandable: Get its PVC to check if file system resize was requested
+				pv := volumeToMount.VolumeSpec.PersistentVolume
+				pvc, err := og.kubeClient.CoreV1().PersistentVolumeClaims(pv.Spec.ClaimRef.Namespace).Get(pv.Spec.ClaimRef.Name, metav1.GetOptions{})
+				if err != nil {
+					// Return error rather than leave the file system un-resized, caller will log and retry
+					return volumeToMount.GenerateErrorDetailed("MountVolume get PVC failed", err)
+				}
+				pvcStatusCap := pvc.Status.Capacity[v1.ResourceStorage]
+				pvSpecCap := pv.Spec.Capacity[v1.ResourceStorage]
+
+				if pvcStatusCap.Value() < pvSpecCap.Value() {
+					// File system resize was requested, proceed
+					glog.Infof(volumeToMount.GenerateMsgDetailed("MountVolume.resizeFileSystem entering", fmt.Sprintf("DevicePath %q", volumeToMount.DevicePath)))
+
+					err := og.resizeFileSystem(mounter, expandableVolumePlugin.GetPluginName(), devicePath)
+					if err != nil {
+						return volumeToMount.GenerateErrorDetailed("MountVolume.resizeFileSystem failed", err)
+					}
+
+					glog.Infof(volumeToMount.GenerateMsgDetailed("MountVolume.resizeFileSystem succeeded", ""))
+
+					// File system resize succeeded, now update the PVC's Capacity to match the PV's
+					pvcClone := pvc.DeepCopy()
+					pvcClone.Status.Capacity = pv.Spec.Capacity
+					_, err = og.kubeClient.CoreV1().PersistentVolumeClaims(pvc.Namespace).UpdateStatus(pvcClone)
+					if err != nil {
+						// On retry, resizeFileSystem will be called again but do nothing
+						return volumeToMount.GenerateErrorDetailed("MountVolume update PVC status failed", err)
+					}
+				}
+			}
 
 			deviceMountPath, err :=
 				volumeAttacher.GetDeviceMountPath(volumeToMount.VolumeSpec)
@@ -498,6 +541,38 @@ func (og *operationGenerator) GenerateMountVolumeFunc(
 
 		return nil
 	}, volumePlugin.GetPluginName(), nil
+}
+
+// TODO where should this function live
+// resizeFileSystem resizes the file system on the given device to fill remaining space. If there is no file system
+// on the given device, it does nothing and returns no error.
+func (og *operationGenerator) resizeFileSystem(
+	mounter mount.Interface,
+	pluginName string,
+	devicePath string) error {
+	diskMounter := &mount.SafeFormatAndMount{Interface: mounter, Exec: og.volumePluginMgr.Host.GetExec(pluginName)}
+
+	format, err := diskMounter.GetDiskFormat(devicePath)
+	if err != nil {
+		return err
+	}
+	if format == "" {
+		return nil
+	}
+
+	deviceOpened, err := diskMounter.DeviceOpened(devicePath)
+	if err != nil {
+		return err
+	}
+	if deviceOpened {
+		return fmt.Errorf("the device %s is in use, its file system can't be resized", devicePath)
+	}
+
+	switch format {
+	case "ext3", "ext4":
+		return resizefs.ResizeExt(devicePath, nil)
+	}
+	return fmt.Errorf("Resizing of format %s is not supported", format)
 }
 
 func (og *operationGenerator) GenerateUnmountVolumeFunc(
