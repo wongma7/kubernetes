@@ -32,9 +32,11 @@ import (
 	"k8s.io/kubernetes/pkg/features"
 	kevents "k8s.io/kubernetes/pkg/kubelet/events"
 	"k8s.io/kubernetes/pkg/util/mount"
+	"k8s.io/kubernetes/pkg/util/resizefs"
 	"k8s.io/kubernetes/pkg/volume"
 	"k8s.io/kubernetes/pkg/volume/util"
 	"k8s.io/kubernetes/pkg/volume/util/volumehelper"
+	"k8s.io/utils/exec"
 )
 
 var _ OperationGenerator = &operationGenerator{}
@@ -74,7 +76,7 @@ func NewOperationGenerator(kubeClient clientset.Interface,
 // OperationGenerator interface that extracts out the functions from operation_executor to make it dependency injectable
 type OperationGenerator interface {
 	// Generates the MountVolume function needed to perform the mount of a volume plugin
-	GenerateMountVolumeFunc(waitForAttachTimeout time.Duration, volumeToMount VolumeToMount, actualStateOfWorldMounterUpdater ActualStateOfWorldMounterUpdater, isRemount bool) (func() error, error)
+	GenerateMountVolumeFunc(waitForAttachTimeout time.Duration, volumeToMount VolumeToMount, actualStateOfWorldMounterUpdater ActualStateOfWorldMounterUpdater, isRemount bool, mounter mount.Interface) (func() error, error)
 
 	// Generates the UnmountVolume function needed to perform the unmount of a volume plugin
 	GenerateUnmountVolumeFunc(volumeToUnmount MountedVolume, actualStateOfWorld ActualStateOfWorldMounterUpdater) (func() error, error)
@@ -362,7 +364,8 @@ func (og *operationGenerator) GenerateMountVolumeFunc(
 	waitForAttachTimeout time.Duration,
 	volumeToMount VolumeToMount,
 	actualStateOfWorld ActualStateOfWorldMounterUpdater,
-	isRemount bool) (func() error, error) {
+	isRemount bool,
+	mounter mount.Interface) (func() error, error) {
 	// Get mounter plugin
 	volumePlugin, err :=
 		og.volumePluginMgr.FindPluginBySpec(volumeToMount.VolumeSpec)
@@ -399,6 +402,14 @@ func (og *operationGenerator) GenerateMountVolumeFunc(
 		volumeAttacher, _ = attachableVolumePlugin.NewAttacher()
 	}
 
+	// Get expander, if possible
+	expandableVolumePlugin, _ :=
+		og.volumePluginMgr.FindExpandablePluginBySpec(volumeToMount.VolumeSpec)
+	var volumeExpander volume.Expander
+	if expandableVolumePlugin != nil {
+		volumeExpander, _ = expandableVolumePlugin.NewExpander(volumeToMount.VolumeSpec)
+	}
+
 	var fsGroup *int64
 	if volumeToMount.Pod.Spec.SecurityContext != nil &&
 		volumeToMount.Pod.Spec.SecurityContext.FSGroup != nil {
@@ -406,14 +417,6 @@ func (og *operationGenerator) GenerateMountVolumeFunc(
 	}
 
 	return func() error {
-		if volumeToMount.PVC != nil {
-			pvcStatusCap := volumeToMount.PVC.Status.Capacity[v1.ResourceStorage]
-			pvSpecCap := volumeToMount.VolumeSpec.PersistentVolume.Spec.Capacity[v1.ResourceStorage]
-			if pvcStatusCap.Value() < pvSpecCap.Value() {
-				//TODO resize
-			}
-		}
-
 		if volumeAttacher != nil {
 			// Wait for attachable volumes to finish attaching
 			glog.Infof(volumeToMount.GenerateMsgDetailed("MountVolume.WaitForAttach entering", fmt.Sprintf("DevicePath %q", volumeToMount.DevicePath)))
@@ -426,6 +429,17 @@ func (og *operationGenerator) GenerateMountVolumeFunc(
 			}
 
 			glog.Infof(volumeToMount.GenerateMsgDetailed("MountVolume.WaitForAttach succeeded", ""))
+
+			if volumeExpander != nil && volumeExpander.RequiresFSResize() && volumeToMount.PVC != nil {
+				pvcStatusCap := volumeToMount.PVC.Status.Capacity[v1.ResourceStorage]
+				pvSpecCap := volumeToMount.VolumeSpec.PersistentVolume.Spec.Capacity[v1.ResourceStorage]
+				if pvcStatusCap.Value() < pvSpecCap.Value() {
+					err := og.resizeFileSystem(volumeToMount, mounter, devicePath)
+					if err != nil {
+						return volumeToMount.GenerateErrorDetailed("MountVolume.resizeFileSystem failed", err)
+					}
+				}
+			}
 
 			deviceMountPath, err :=
 				volumeAttacher.GetDeviceMountPath(volumeToMount.VolumeSpec)
@@ -501,6 +515,33 @@ func (og *operationGenerator) GenerateMountVolumeFunc(
 
 		return nil
 	}, nil
+}
+
+func (og *operationGenerator) resizeFileSystem(
+	volumeToMount VolumeToMount,
+	mounter mount.Interface,
+	devicePath string) error {
+	diskMounter := &mount.SafeFormatAndMount{Interface: mounter, Runner: exec.New()}
+
+	deviceOpened, err := diskMounter.DeviceOpened(devicePath)
+	if err != nil {
+		return err
+	}
+	if deviceOpened {
+		return fmt.Errorf("the device %s is in use, its file system can't be resized", devicePath)
+	}
+
+	format, err := diskMounter.GetDiskFormat(devicePath)
+	if err != nil {
+		return err
+	}
+	switch format {
+	case "ext3", "ext4":
+		return resizefs.ResizeExt(devicePath, nil)
+	case "xfs":
+		return fmt.Errorf("TODO: xfs")
+	}
+	return fmt.Errorf("Resizing of format %s is not supported", format)
 }
 
 func (og *operationGenerator) GenerateUnmountVolumeFunc(
@@ -736,14 +777,14 @@ func (og *operationGenerator) GenerateExpandVolumeFunc(
 		return nil, fmt.Errorf("Error finding plugin for expanding volume: %q with error %v", pvcWithResizeRequest.QualifiedName(), err)
 	}
 
-	expanderPlugin, err := volumePlugin.NewExpander()
+	expanderPlugin, err := volumePlugin.NewExpander(pvcWithResizeRequest.VolumeSpec)
 
 	if err != nil {
 		return nil, fmt.Errorf("Error creating expander plugin for volume %q with error %v", pvcWithResizeRequest.QualifiedName(), err)
 	}
 
 	expandFunc := func() error {
-		expandErr := expanderPlugin.ExpandVolumeDevice(pvcWithResizeRequest.VolumeSpec, pvcWithResizeRequest.ExpectedSize, pvcWithResizeRequest.CurrentSize)
+		expandErr := expanderPlugin.ExpandVolumeDevice(pvcWithResizeRequest.ExpectedSize, pvcWithResizeRequest.CurrentSize)
 
 		if expandErr != nil {
 			glog.Errorf("Error expanding volume through cloudprovider for volume %q : %v", pvcWithResizeRequest.QualifiedName(), expandErr)

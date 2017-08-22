@@ -359,7 +359,7 @@ func (mounter *SafeFormatAndMount) formatAndMount(source string, target string, 
 	if mountErr != nil {
 		// Mount failed. This indicates either that the disk is unformatted or
 		// it contains an unexpected filesystem.
-		existingFormat, err := mounter.getDiskFormat(source)
+		existingFormat, err := mounter.GetDiskFormat(source)
 		if err != nil {
 			return err
 		}
@@ -398,8 +398,8 @@ func (mounter *SafeFormatAndMount) formatAndMount(source string, target string, 
 	return mountErr
 }
 
-// diskLooksUnformatted uses 'lsblk' to see if the given disk is unformated
-func (mounter *SafeFormatAndMount) getDiskFormat(disk string) (string, error) {
+// GetDiskFormat uses 'lsblk' to see if the given disk is unformated
+func (mounter *SafeFormatAndMount) GetDiskFormat(disk string) (string, error) {
 	args := []string{"-n", "-o", "FSTYPE", disk}
 	cmd := mounter.Runner.Command("lsblk", args...)
 	glog.V(4).Infof("Attempting to determine if disk %q is formatted using lsblk with args: (%v)", disk, args)
