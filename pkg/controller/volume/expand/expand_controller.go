@@ -1,5 +1,5 @@
 /*
-Copyright 2016 The Kubernetes Authors.
+Copyright 2017 The Kubernetes Authors.b
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -100,7 +100,7 @@ func NewExpandController(
 		pvSynced:   pvInformer.Informer().HasSynced,
 	}
 
-	if err := expc.volumePluginMgr.InitPlugins(plugins, expc); err != nil {
+	if err := expc.volumePluginMgr.InitPlugins(plugins, nil, expc); err != nil {
 		return nil, fmt.Errorf("Could not initialize volume plugins for Expand Controller : %+v", err)
 	}
 
@@ -153,15 +153,15 @@ func (expc *expandController) pvcUpdate(oldObj, newObj interface{}) {
 	if newPvc == nil || !ok {
 		return
 	}
-	volumeSpec, err := CreateVolumeSpec(newPvc, expc.pvcLister, expc.pvLister)
+	volumeSpec, err := createVolumeSpec(newPvc, expc.pvcLister, expc.pvLister)
 	if err != nil {
 		glog.Errorf("Error creating volume spec during update event : %v", err)
 		return
 	}
-	expc.resizeMap.AddPvcUpdate(newPvc, oldPvc, volumeSpec)
+	expc.resizeMap.AddPVCUpdate(newPvc, oldPvc, volumeSpec)
 }
 
-func CreateVolumeSpec(
+func createVolumeSpec(
 	pvc *v1.PersistentVolumeClaim,
 	pvcLister corelisters.PersistentVolumeClaimLister,
 	pvLister corelisters.PersistentVolumeLister) (*volume.Spec, error) {
@@ -214,8 +214,12 @@ func (expc *expandController) GetCloudProvider() cloudprovider.Interface {
 	return expc.cloud
 }
 
-func (expc *expandController) GetMounter() mount.Interface {
+func (expc *expandController) GetMounter(pluginName string) mount.Interface {
 	return nil
+}
+
+func (expc *expandController) GetExec(pluginName string) mount.Exec {
+	return mount.NewOsExec()
 }
 
 func (expc *expandController) GetWriter() io.Writer {
@@ -227,7 +231,7 @@ func (expc *expandController) GetHostName() string {
 }
 
 func (expc *expandController) GetHostIP() (net.IP, error) {
-	return nil, fmt.Errorf("GetHostIP() not supported by expand controller's VolumeHost implementation")
+	return nil, fmt.Errorf("GetHostIP not supported by expand controller's VolumeHost implementation")
 }
 
 func (expc *expandController) GetNodeAllocatable() (v1.ResourceList, error) {
@@ -247,5 +251,5 @@ func (expc *expandController) GetConfigMapFunc() func(namespace, name string) (*
 }
 
 func (expc *expandController) GetNodeLabels() (map[string]string, error) {
-	return nil, fmt.Errorf("GetNodeLabels() unsupported in expandController")
+	return nil, fmt.Errorf("GetNodeLabels unsupported in expandController")
 }

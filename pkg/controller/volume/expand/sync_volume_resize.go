@@ -1,5 +1,5 @@
 /*
-Copyright 2016 The Kubernetes Authors.
+Copyright 2017 The Kubernetes Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -55,7 +55,7 @@ func (rc *syncResize) Run(stopCh <-chan struct{}) {
 
 func (rc *syncResize) Sync() {
 	// Resize PVCs that require resize
-	for _, pvcWithResizeRequest := range rc.resizeMap.GetPvcsWithResizeRequest() {
+	for _, pvcWithResizeRequest := range rc.resizeMap.GetPVCsWithResizeRequest() {
 		uniqueVolumeKey := v1.UniqueVolumeName(pvcWithResizeRequest.UniquePvcKey())
 		if rc.opsExecutor.IsOperationPending(uniqueVolumeKey, "") {
 			glog.V(10).Infof("Operation for PVC %v is already pending", pvcWithResizeRequest.UniquePvcKey())
@@ -64,19 +64,6 @@ func (rc *syncResize) Sync() {
 		growFuncError := rc.opsExecutor.ExpandVolume(pvcWithResizeRequest, rc.resizeMap)
 		if growFuncError != nil {
 			glog.Errorf("Error growing pvc with %v", growFuncError)
-		}
-		glog.Infof("Resizing PVC %s", pvcWithResizeRequest.CurrentSize)
-	}
-
-	// For PVCs whose API objects updates failed the first time, try again
-	for _, pvcWithUpdateNeeded := range rc.resizeMap.GetPvcsWithUpdateNeeded() {
-		switch *pvcWithUpdateNeeded.UpdateNeeded {
-		case cache.Resized:
-			rc.resizeMap.MarkAsResized(pvcWithUpdateNeeded)
-		case cache.ResizeFailed:
-			rc.resizeMap.MarkResizeFailed(pvcWithUpdateNeeded, *pvcWithUpdateNeeded.FailedReason)
-		case cache.FsResize:
-			rc.resizeMap.MarkForFileSystemResize(pvcWithUpdateNeeded)
 		}
 	}
 }

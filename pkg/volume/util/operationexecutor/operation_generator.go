@@ -102,7 +102,7 @@ type OperationGenerator interface {
 		string,
 		map[*volume.Spec]v1.UniqueVolumeName, ActualStateOfWorldAttacherUpdater) (func() error, error)
 
-	GenerateExpandVolumeFunc(*expandcache.PvcWithResizeRequest, expandcache.VolumeResizeMap) (func() error, error)
+	GenerateExpandVolumeFunc(*expandcache.PvcWithResizeRequest, expandcache.VolumeResizeMap) (func() error, string, error)
 }
 
 func (og *operationGenerator) GenerateVolumesAreAttachedFunc(
@@ -731,18 +731,18 @@ func (og *operationGenerator) verifyVolumeIsSafeToDetach(
 
 func (og *operationGenerator) GenerateExpandVolumeFunc(
 	pvcWithResizeRequest *expandcache.PvcWithResizeRequest,
-	resizeMap expandcache.VolumeResizeMap) (func() error, error) {
+	resizeMap expandcache.VolumeResizeMap) (func() error, string, error) {
 
 	volumePlugin, err := og.volumePluginMgr.FindExpandablePluginBySpec(pvcWithResizeRequest.VolumeSpec)
 
 	if err != nil {
-		return nil, fmt.Errorf("Error finding plugin for expanding volume: %q with error %v", pvcWithResizeRequest.QualifiedName(), err)
+		return nil, "", fmt.Errorf("Error finding plugin for expanding volume: %q with error %v", pvcWithResizeRequest.QualifiedName(), err)
 	}
 
 	expanderPlugin, err := volumePlugin.NewExpander(pvcWithResizeRequest.VolumeSpec)
 
 	if err != nil {
-		return nil, fmt.Errorf("Error creating expander plugin for volume %q with error %v", pvcWithResizeRequest.QualifiedName(), err)
+		return nil, volumePlugin.GetPluginName(), fmt.Errorf("Error creating expander plugin for volume %q with error %v", pvcWithResizeRequest.QualifiedName(), err)
 	}
 
 	expandFunc := func() error {
@@ -778,7 +778,7 @@ func (og *operationGenerator) GenerateExpandVolumeFunc(
 		return nil
 
 	}
-	return expandFunc, nil
+	return expandFunc, volumePlugin.GetPluginName(), nil
 }
 
 func checkMountOptionSupport(og *operationGenerator, volumeToMount VolumeToMount, plugin volume.VolumePlugin) error {
