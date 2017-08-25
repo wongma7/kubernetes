@@ -31,6 +31,7 @@ import (
 	"k8s.io/kubernetes/pkg/volume/util/types"
 )
 
+// VolumeResizeMap defines an interface that serves as a cache for holding pending resizing requests
 type VolumeResizeMap interface {
 	AddPvcUpdate(newPvc *v1.PersistentVolumeClaim, oldPvc *v1.PersistentVolumeClaim, spec *volume.Spec)
 	GetPvcsWithResizeRequest() []*PvcWithResizeRequest
@@ -66,14 +67,18 @@ type PvcWithResizeRequest struct {
 	ResizeDone bool
 }
 
+// UniquePvcKey returns unique key of the PVC based on its UID
 func (pvcr *PvcWithResizeRequest) UniquePvcKey() types.UniquePvcName {
 	return types.UniquePvcName(pvcr.PVC.UID)
 }
 
+// QualifiedName returns namespace and name combination of the PVC
 func (pvcr *PvcWithResizeRequest) QualifiedName() string {
 	return strings.JoinQualifiedName(pvcr.PVC.Namespace, pvcr.PVC.Name)
 }
 
+// NewVolumeResizeMap returns new VolumeResizeMap which acts as a cache
+// for holding pending resize requests.
 func NewVolumeResizeMap(kubeClient clientset.Interface) VolumeResizeMap {
 	resizeMap := &volumeResizeMap{}
 	resizeMap.pvcrs = make(map[types.UniquePvcName]*PvcWithResizeRequest)
