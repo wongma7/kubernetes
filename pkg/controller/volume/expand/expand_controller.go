@@ -214,8 +214,12 @@ func (expc *expandController) GetCloudProvider() cloudprovider.Interface {
 	return expc.cloud
 }
 
-func (expc *expandController) GetMounter() mount.Interface {
+func (expc *expandController) GetMounter(pluginName string) mount.Interface {
 	return nil
+}
+
+func (expc *expandController) GetExec(pluginName string) mount.Exec {
+	return mount.NewOsExec()
 }
 
 func (expc *expandController) GetWriter() io.Writer {
