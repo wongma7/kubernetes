@@ -65,7 +65,6 @@ func (rc *syncResize) Sync() {
 		if growFuncError != nil {
 			glog.Errorf("Error growing pvc with %v", growFuncError)
 		}
-		glog.Infof("Resizing PVC %s", pvcWithResizeRequest.CurrentSize)
 	}
 
 }

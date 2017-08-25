@@ -127,6 +127,13 @@ func (plugin *glusterfsPlugin) SupportsBulkVolumeVerification() bool {
 	return false
 }
 
+func (plugin *glusterfsPlugin) NewExpander(spec *volume.Spec) (volume.Expander, error) {
+	return &glusterfsDiskExpander{&glusterfs{
+		volName: spec.Name(),
+		plugin:  plugin,
+	}}, nil
+}
+
 func (plugin *glusterfsPlugin) GetAccessModes() []v1.PersistentVolumeAccessMode {
 	return []v1.PersistentVolumeAccessMode{
 		v1.ReadWriteOnce,
@@ -1044,4 +1051,19 @@ func parseClassParameters(params map[string]string, kubeClient clientset.Interfa
 
 	}
 	return &cfg, nil
+}
+
+type glusterfsDiskExpander struct {
+	*glusterfs
+}
+
+var _ volume.Expander = &glusterfsDiskExpander{}
+
+func (e *glusterfsDiskExpander) ExpandVolumeDevice(newSize resource.Quantity, oldSize resource.Quantity) error {
+	glog.Infof("********** Calling expand volume device **********")
+	return nil
+}
+
+func (e *glusterfsDiskExpander) RequiresFSResize() bool {
+	return false
 }
