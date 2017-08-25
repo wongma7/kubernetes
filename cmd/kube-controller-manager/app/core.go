@@ -194,7 +194,7 @@ func startVolumeExpandController(ctx ControllerContext) (bool, error) {
 		ctx.InformerFactory.Core().V1().PersistentVolumeClaims(),
 		ctx.InformerFactory.Core().V1().PersistentVolumes(),
 		ctx.Cloud,
-		ProbeAttachableVolumePlugins(ctx.Options.VolumeConfiguration))
+		ProbeExpandableVolumePlugins(ctx.Options.VolumeConfiguration))
 
 	if expandControllerErr != nil {
 		return true, fmt.Errorf("Failed to start volume expand controller : %v", expandControllerErr)

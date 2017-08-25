@@ -23,6 +23,7 @@ import (
 	"github.com/golang/glog"
 	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/kubernetes/pkg/util/strings"
@@ -37,6 +38,8 @@ type VolumeResizeMap interface {
 	MarkAsResized(*PvcWithResizeRequest) error
 	MarkForFileSystemResize(*PvcWithResizeRequest) error
 	MarkResizeFailed(*PvcWithResizeRequest, string) error
+	// Remove all resized pvcs from map
+	RemoveResizedPVCs()
 }
 
 type volumeResizeMap struct {
@@ -112,6 +115,18 @@ func (resizeMap *volumeResizeMap) GetPvcsWithResizeRequest() []*PvcWithResizeReq
 	return pvcrs
 }
 
+func (resizeMap *volumeResizeMap) RemoveResizedPVCs() {
+	resizeMap.Lock()
+	defer resizeMap.Unlock()
+	newPvcr := map[types.UniquePvcName]*PvcWithResizeRequest{}
+	for _, pvcr := range resizeMap.pvcrs {
+		if !pvcr.ResizeDone {
+			newPvcr[pvcr.UniquePvcKey()] = pvcr
+		}
+	}
+	resizeMap.pvcrs = newPvcr
+}
+
 func (resizeMap *volumeResizeMap) MarkAsResized(pvcr *PvcWithResizeRequest) error {
 	resizeMap.Lock()
 	defer resizeMap.Unlock()
@@ -125,8 +140,9 @@ func (resizeMap *volumeResizeMap) MarkAsResized(pvcr *PvcWithResizeRequest) erro
 	}
 
 	readyCondition := v1.PvcCondition{
-		Type:   v1.PvcReady,
-		Status: v1.ConditionTrue,
+		Type:               v1.PvcReady,
+		Status:             v1.ConditionTrue,
+		LastTransitionTime: metav1.Now(),
 	}
 
 	err = resizeMap.updatePvcCapacityAndConditions(pvcr, pvcr.ExpectedSize, readyCondition)
@@ -150,9 +166,10 @@ func (resizeMap *volumeResizeMap) MarkResizeFailed(pvcr *PvcWithResizeRequest, r
 	// This needs to be done atomically somehow so as these operations succeed or fail together.
 	// If any part of this update fails, resize has to be tried again
 	failedCondition := v1.PvcCondition{
-		Type:   v1.PvcResizeFailed,
-		Status: v1.ConditionTrue,
-		Reason: reason,
+		Type:               v1.PvcResizeFailed,
+		Status:             v1.ConditionTrue,
+		Reason:             reason,
+		LastTransitionTime: metav1.Now(),
 	}
 
 	err := resizeMap.updatePvcCondition(pvcr, failedCondition)

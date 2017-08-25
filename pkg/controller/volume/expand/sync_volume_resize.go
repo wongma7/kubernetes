@@ -67,4 +67,5 @@ func (rc *syncResize) Sync() {
 		}
 	}
 
+	rc.resizeMap.RemoveResizedPVCs()
 }
