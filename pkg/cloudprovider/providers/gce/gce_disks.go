@@ -66,6 +66,9 @@ type Disks interface {
 	// DeleteDisk deletes PD.
 	DeleteDisk(diskToDelete string) error
 
+	// ResizeDisk resizes PD.
+	ResizeDisk(diskToResize string, sizeGb int64) error
+
 	// GetAutoLabelsForPD returns labels to apply to PersistentVolume
 	// representing this PD, namely failure domain and zone.
 	// zone can be provided to specify the zone for the PD,
@@ -270,6 +273,26 @@ func (gce *GCECloud) DeleteDisk(diskToDelete string) error {
 		return nil
 	}
 	return err
+}
+
+func (gce *GCECloud) ResizeDisk(diskToResize string, sizeGb int64) error {
+	disk, err := gce.GetDiskByNameUnknownZone(diskToResize)
+	if err != nil {
+		return err
+	}
+
+	diskResizeRequest := &compute.DisksResizeRequest{
+		SizeGb: sizeGb,
+	}
+
+	mc := newDiskMetricContext("resize", disk.Zone)
+
+	resizeOp, err := gce.manager.ResizeDisk(gce.projectID, disk.Zone, disk.Name, diskResizeRequest)
+	if err != nil {
+		return mc.Observe(err)
+	}
+
+	return gce.manager.WaitForZoneOp(resizeOp, disk.Zone, mc)
 }
 
 // Builds the labels that should be automatically added to a PersistentVolume backed by a GCE PD
