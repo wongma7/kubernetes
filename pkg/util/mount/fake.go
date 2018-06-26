@@ -212,6 +212,10 @@ func (f *FakeMounter) ExistsPath(pathname string) (bool, error) {
 	return false, nil
 }
 
+func (f *FakeMounter) EvalHostSymlinks(pathname string) (string, error) {
+	return filepath.EvalSymlinks(pathname)
+}
+
 func (f *FakeMounter) PrepareSafeSubpath(subPath Subpath) (newHostPath string, cleanupAction func(), err error) {
 	return subPath.Path, nil, nil
 }
