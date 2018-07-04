@@ -814,32 +814,31 @@ func TestSetDefaultPersistentVolume(t *testing.T) {
 		t.Errorf("Expected pv reclaim policy %v, got %v", v1.PersistentVolumeReclaimRetain, pv2.Spec.PersistentVolumeReclaimPolicy)
 	}
 
-	// When feature gate is disabled, field should not be defaulted
+	// When feature gate is enabled, field should be defaulted
 	defaultMode := v1.PersistentVolumeFilesystem
 	outputMode := pv2.Spec.VolumeMode
-	if outputMode != nil {
-		t.Errorf("Expected VolumeMode to not be defaulted, got: %+v", outputMode)
+	if outputMode == nil {
+		t.Errorf("Expected VolumeMode to be defaulted to: %+v, got: nil", defaultMode)
+	} else if *outputMode != defaultMode {
+		t.Errorf("Expected VolumeMode to be defaulted to: %+v, got: %+v", defaultMode, outputMode)
 	}
 
-	// When feature gate is enabled, field should be defaulted
-	err := utilfeature.DefaultFeatureGate.Set("BlockVolume=true")
+	// When feature gate is disabled, field should not be defaulted
+	err := utilfeature.DefaultFeatureGate.Set("BlockVolume=false")
 	if err != nil {
-		t.Fatalf("Failed to enable feature gate for BlockVolume: %v", err)
+		t.Fatalf("Failed to disable feature gate for BlockVolume: %v", err)
 	}
 	obj3 := roundTrip(t, runtime.Object(pv)).(*v1.PersistentVolume)
 	outputMode3 := obj3.Spec.VolumeMode
 
-	if outputMode3 == nil {
-		t.Errorf("Expected VolumeMode to be defaulted to: %+v, got: nil", defaultMode)
-	} else if *outputMode3 != defaultMode {
-		t.Errorf("Expected VolumeMode to be defaulted to: %+v, got: %+v", defaultMode, outputMode3)
+	if outputMode3 != nil {
+		t.Errorf("Expected VolumeMode to not be defaulted, got: %+v", outputMode)
 	}
 
-	err = utilfeature.DefaultFeatureGate.Set("BlockVolume=false")
+	err = utilfeature.DefaultFeatureGate.Set("BlockVolume=true")
 	if err != nil {
-		t.Fatalf("Failed to disable feature gate for BlockVolume: %v", err)
+		t.Fatalf("Failed to enable feature gate for BlockVolume: %v", err)
 	}
-
 }
 
 func TestSetDefaultPersistentVolumeClaim(t *testing.T) {
@@ -851,30 +850,30 @@ func TestSetDefaultPersistentVolumeClaim(t *testing.T) {
 		t.Errorf("Expected claim phase %v, got %v", v1.ClaimPending, pvc2.Status.Phase)
 	}
 
-	// When feature gate is disabled, field should not be defaulted
+	// When feature gate is enabled, field should be defaulted
 	defaultMode := v1.PersistentVolumeFilesystem
 	outputMode := pvc2.Spec.VolumeMode
-	if outputMode != nil {
-		t.Errorf("Expected VolumeMode to not be defaulted, got: %+v", outputMode)
+	if outputMode == nil {
+		t.Errorf("Expected VolumeMode to be defaulted to: %+v, got: nil", defaultMode)
+	} else if *outputMode != defaultMode {
+		t.Errorf("Expected VolumeMode to be defaulted to: %+v, got: %+v", defaultMode, outputMode)
 	}
 
-	// When feature gate is enabled, field should be defaulted
-	err := utilfeature.DefaultFeatureGate.Set("BlockVolume=true")
+	// When feature gate is disabled, field should not be defaulted
+	err := utilfeature.DefaultFeatureGate.Set("BlockVolume=false")
 	if err != nil {
-		t.Fatalf("Failed to enable feature gate for BlockVolume: %v", err)
+		t.Fatalf("Failed to disable feature gate for BlockVolume: %v", err)
 	}
 	obj3 := roundTrip(t, runtime.Object(pvc)).(*v1.PersistentVolumeClaim)
 	outputMode3 := obj3.Spec.VolumeMode
 
-	if outputMode3 == nil {
-		t.Errorf("Expected VolumeMode to be defaulted to: %+v, got: nil", defaultMode)
-	} else if *outputMode3 != defaultMode {
-		t.Errorf("Expected VolumeMode to be defaulted to: %+v, got: %+v", defaultMode, outputMode3)
+	if outputMode3 != nil {
+		t.Errorf("Expected VolumeMode to not be defaulted, got: %+v", outputMode)
 	}
 
-	err = utilfeature.DefaultFeatureGate.Set("BlockVolume=false")
+	err = utilfeature.DefaultFeatureGate.Set("BlockVolume=true")
 	if err != nil {
-		t.Fatalf("Failed to disable feature gate for BlockVolume: %v", err)
+		t.Fatalf("Failed to enable feature gate for BlockVolume: %v", err)
 	}
 }
 
