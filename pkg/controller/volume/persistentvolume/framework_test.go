@@ -630,6 +630,7 @@ func newTestController(kubeClient clientset.Interface, informerFactory informers
 
 // newVolume returns a new volume with given attributes
 func newVolume(name, capacity, boundToClaimUID, boundToClaimName string, phase v1.PersistentVolumePhase, reclaimPolicy v1.PersistentVolumeReclaimPolicy, class string, annotations ...string) *v1.PersistentVolume {
+	fs := v1.PersistentVolumeFilesystem
 	volume := v1.PersistentVolume{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            name,
@@ -645,6 +646,7 @@ func newVolume(name, capacity, boundToClaimUID, boundToClaimName string, phase v
 			AccessModes:                   []v1.PersistentVolumeAccessMode{v1.ReadWriteOnce, v1.ReadOnlyMany},
 			PersistentVolumeReclaimPolicy: reclaimPolicy,
 			StorageClassName:              class,
+			VolumeMode:                    &fs,
 		},
 		Status: v1.PersistentVolumeStatus{
 			Phase: phase,
@@ -740,6 +742,7 @@ func newVolumeArray(name, capacity, boundToClaimUID, boundToClaimName string, ph
 
 // newClaim returns a new claim with given attributes
 func newClaim(name, claimUID, capacity, boundToVolume string, phase v1.PersistentVolumeClaimPhase, class *string, annotations ...string) *v1.PersistentVolumeClaim {
+	fs := v1.PersistentVolumeFilesystem
 	claim := v1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            name,
@@ -756,6 +759,7 @@ func newClaim(name, claimUID, capacity, boundToVolume string, phase v1.Persisten
 			},
 			VolumeName:       boundToVolume,
 			StorageClassName: class,
+			VolumeMode:       &fs,
 		},
 		Status: v1.PersistentVolumeClaimStatus{
 			Phase: phase,
@@ -1226,6 +1230,7 @@ func (plugin *mockVolumePlugin) Provision(selectedNode *v1.Node, allowedTopologi
 				Phase: v1.VolumeAvailable,
 			},
 		}
+		pv.Spec.VolumeMode = plugin.provisionOptions.PVC.Spec.VolumeMode
 	}
 
 	plugin.provisionCallCounter++
