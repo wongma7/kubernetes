@@ -45,12 +45,14 @@ import (
 
 func TestFindAndAddNewPods_FindAndRemoveDeletedPods(t *testing.T) {
 	// create dswp
+	mode := v1.PersistentVolumeFilesystem
 	pv := &v1.PersistentVolume{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "dswp-test-volume-name",
 		},
 		Spec: v1.PersistentVolumeSpec{
-			ClaimRef: &v1.ObjectReference{Namespace: "ns", Name: "file-bound"},
+			ClaimRef:   &v1.ObjectReference{Namespace: "ns", Name: "file-bound"},
+			VolumeMode: &mode,
 		},
 	}
 	pvc := &v1.PersistentVolumeClaim{

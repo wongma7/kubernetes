@@ -1030,7 +1030,7 @@ func toggleFeature(toggleFlag bool, featureName string, t *testing.T) {
 	}
 }
 
-func TestAlphaVolumeModeCheck(t *testing.T) {
+func TestVolumeModeCheck(t *testing.T) {
 
 	blockMode := v1.PersistentVolumeBlock
 	filesystemMode := v1.PersistentVolumeFilesystem
@@ -1038,55 +1038,55 @@ func TestAlphaVolumeModeCheck(t *testing.T) {
 	// If feature gate is enabled, VolumeMode will always be defaulted
 	// If feature gate is disabled, VolumeMode is dropped by API and ignored
 	scenarios := map[string]struct {
-		isExpectedMisMatch bool
+		isExpectedMismatch bool
 		vol                *v1.PersistentVolume
 		pvc                *v1.PersistentVolumeClaim
 		enableBlock        bool
 	}{
 		"feature enabled - pvc block and pv filesystem": {
-			isExpectedMisMatch: true,
+			isExpectedMismatch: true,
 			vol:                createVolumeModeFilesystemTestVolume(),
 			pvc:                makeVolumeModePVC("8G", &blockMode, nil),
 			enableBlock:        true,
 		},
 		"feature enabled - pvc filesystem and pv block": {
-			isExpectedMisMatch: true,
+			isExpectedMismatch: true,
 			vol:                createVolumeModeBlockTestVolume(),
 			pvc:                makeVolumeModePVC("8G", &filesystemMode, nil),
 			enableBlock:        true,
 		},
 		"feature enabled - pvc block and pv block": {
-			isExpectedMisMatch: false,
+			isExpectedMismatch: false,
 			vol:                createVolumeModeBlockTestVolume(),
 			pvc:                makeVolumeModePVC("8G", &blockMode, nil),
 			enableBlock:        true,
 		},
 		"feature enabled - pvc filesystem and pv filesystem": {
-			isExpectedMisMatch: false,
+			isExpectedMismatch: false,
 			vol:                createVolumeModeFilesystemTestVolume(),
 			pvc:                makeVolumeModePVC("8G", &filesystemMode, nil),
 			enableBlock:        true,
 		},
 		"feature disabled - pvc block and pv filesystem": {
-			isExpectedMisMatch: false,
+			isExpectedMismatch: false,
 			vol:                createVolumeModeFilesystemTestVolume(),
 			pvc:                makeVolumeModePVC("8G", &blockMode, nil),
 			enableBlock:        false,
 		},
 		"feature disabled - pvc filesystem and pv block": {
-			isExpectedMisMatch: false,
+			isExpectedMismatch: false,
 			vol:                createVolumeModeBlockTestVolume(),
 			pvc:                makeVolumeModePVC("8G", &filesystemMode, nil),
 			enableBlock:        false,
 		},
 		"feature disabled - pvc block and pv block": {
-			isExpectedMisMatch: false,
+			isExpectedMismatch: false,
 			vol:                createVolumeModeBlockTestVolume(),
 			pvc:                makeVolumeModePVC("8G", &blockMode, nil),
 			enableBlock:        false,
 		},
 		"feature disabled - pvc filesystem and pv filesystem": {
-			isExpectedMisMatch: false,
+			isExpectedMismatch: false,
 			vol:                createVolumeModeFilesystemTestVolume(),
 			pvc:                makeVolumeModePVC("8G", &filesystemMode, nil),
 			enableBlock:        false,
@@ -1095,15 +1095,15 @@ func TestAlphaVolumeModeCheck(t *testing.T) {
 
 	for name, scenario := range scenarios {
 		toggleFeature(scenario.enableBlock, "BlockVolume", t)
-		expectedMisMatch, err := checkVolumeModeMisMatches(&scenario.pvc.Spec, &scenario.vol.Spec)
+		expectedMismatch, err := checkVolumeModeMismatches(&scenario.pvc.Spec, &scenario.vol.Spec)
 		if err != nil {
-			t.Errorf("Unexpected failure for checkVolumeModeMisMatches: %v", err)
+			t.Errorf("Unexpected failure for checkVolumeModeMismatches: %v", err)
 		}
 		// expected to match but either got an error or no returned pvmatch
-		if expectedMisMatch && !scenario.isExpectedMisMatch {
+		if expectedMismatch && !scenario.isExpectedMismatch {
 			t.Errorf("Unexpected failure for scenario, expected not to mismatch on modes but did: %s", name)
 		}
-		if !expectedMisMatch && scenario.isExpectedMisMatch {
+		if !expectedMismatch && scenario.isExpectedMismatch {
 			t.Errorf("Unexpected failure for scenario, did not mismatch on mode when expected to mismatch: %s", name)
 		}
 	}
@@ -1112,7 +1112,7 @@ func TestAlphaVolumeModeCheck(t *testing.T) {
 	toggleFeature(false, "BlockVolume", t)
 }
 
-func TestAlphaFilteringVolumeModes(t *testing.T) {
+func TestFilteringVolumeModes(t *testing.T) {
 	blockMode := v1.PersistentVolumeBlock
 	filesystemMode := v1.PersistentVolumeFilesystem
 
