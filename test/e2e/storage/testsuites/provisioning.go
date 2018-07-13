@@ -198,7 +198,7 @@ func testProvisioning(input *provisioningTestInput) {
 		framework.ExpectNoError(framework.WaitForPersistentVolumeDeleted(input.cs, pv.Name, 1*time.Second, 30*time.Second))
 	})
 
-	It("should create and delete block persistent volumes [Feature:BlockVolume]", func() {
+	It("should create and delete block persistent volumes", func() {
 		if !input.dInfo.IsBlockSupported {
 			framework.Skipf("Driver %q does not support BlockVolume - skipping", input.dInfo.Name)
 		}
