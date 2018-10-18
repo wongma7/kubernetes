@@ -216,6 +216,7 @@ const (
 
 	// owner: @screeley44
 	// alpha: v1.9
+	// beta: v1.13
 	//
 	// Enable Block volume support in containers.
 	BlockVolume utilfeature.Feature = "BlockVolume"
@@ -418,7 +419,7 @@ var defaultKubernetesFeatureGates = map[utilfeature.Feature]utilfeature.FeatureS
 	CSIDriverRegistry:                           {Default: false, PreRelease: utilfeature.Alpha},
 	CSINodeInfo:                                 {Default: false, PreRelease: utilfeature.Alpha},
 	CustomPodDNS:                                {Default: true, PreRelease: utilfeature.Beta},
-	BlockVolume:                                 {Default: false, PreRelease: utilfeature.Alpha},
+	BlockVolume:                                 {Default: true, PreRelease: utilfeature.Beta},
 	StorageObjectInUseProtection:                {Default: true, PreRelease: utilfeature.GA},
 	ResourceLimitsPriorityFunction:              {Default: true, PreRelease: utilfeature.Beta},
 	SupportIPVSProxyMode:                        {Default: true, PreRelease: utilfeature.GA},
