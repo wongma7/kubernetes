@@ -1027,6 +1027,7 @@ func makeDynamicProvisionerStorageClass(name string, mode *storagev1.VolumeBindi
 }
 
 func makePV(name, scName, pvcName, ns, node string) *v1.PersistentVolume {
+	volumeMode := v1.PersistentVolumeFilesystem
 	pv := &v1.PersistentVolume{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        name,
@@ -1045,6 +1046,7 @@ func makePV(name, scName, pvcName, ns, node string) *v1.PersistentVolume {
 					Path: "/test-path",
 				},
 			},
+			VolumeMode: &volumeMode,
 			NodeAffinity: &v1.VolumeNodeAffinity{
 				Required: &v1.NodeSelector{
 					NodeSelectorTerms: []v1.NodeSelectorTerm{
@@ -1071,6 +1073,7 @@ func makePV(name, scName, pvcName, ns, node string) *v1.PersistentVolume {
 }
 
 func makePVC(name, ns string, scName *string, volumeName string) *v1.PersistentVolumeClaim {
+	volumeMode := v1.PersistentVolumeFilesystem
 	return &v1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -1086,6 +1089,7 @@ func makePVC(name, ns string, scName *string, volumeName string) *v1.PersistentV
 				},
 			},
 			StorageClassName: scName,
+			VolumeMode:       &volumeMode,
 			VolumeName:       volumeName,
 		},
 	}
