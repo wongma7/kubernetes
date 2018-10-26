@@ -18,11 +18,14 @@ package auth
 
 import (
 	"fmt"
+	"io/ioutil"
+	"strings"
 	"testing"
 	"time"
 
 	storagev1beta1 "k8s.io/api/storage/v1beta1"
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
+	apiextensionsclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -31,22 +34,18 @@ import (
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	utilfeaturetesting "k8s.io/apiserver/pkg/util/feature/testing"
 	externalclientset "k8s.io/client-go/kubernetes"
-	csiv1alpha1 "k8s.io/csi-api/pkg/apis/csi/v1alpha1"
+	csiv1beta1 "k8s.io/csi-api/pkg/apis/csi/v1beta1"
+	csiclientset "k8s.io/csi-api/pkg/client/clientset/versioned"
+	csicrd "k8s.io/csi-api/pkg/crd"
+	kubeapiservertesting "k8s.io/kubernetes/cmd/kube-apiserver/app/testing"
 	"k8s.io/kubernetes/pkg/apis/coordination"
+	"k8s.io/kubernetes/pkg/apis/core"
 	api "k8s.io/kubernetes/pkg/apis/core"
 	"k8s.io/kubernetes/pkg/apis/policy"
 	clientset "k8s.io/kubernetes/pkg/client/clientset_generated/internalclientset"
 	"k8s.io/kubernetes/pkg/features"
 	"k8s.io/kubernetes/test/integration/framework"
 	"k8s.io/utils/pointer"
-
-	"io/ioutil"
-	apiextensionsclientset "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
-	csiclientset "k8s.io/csi-api/pkg/client/clientset/versioned"
-	csicrd "k8s.io/csi-api/pkg/crd"
-	kubeapiservertesting "k8s.io/kubernetes/cmd/kube-apiserver/app/testing"
-	"k8s.io/kubernetes/pkg/apis/core"
-	"strings"
 )
 
 func TestNodeAuthorizer(t *testing.T) {
@@ -411,17 +410,17 @@ func TestNodeAuthorizer(t *testing.T) {
 
 	getNode1CSINodeInfo := func(client csiclientset.Interface) func() error {
 		return func() error {
-			_, err := client.CsiV1alpha1().CSINodeInfos().Get("node1", metav1.GetOptions{})
+			_, err := client.CsiV1beta1().CSINodeInfos().Get("node1", metav1.GetOptions{})
 			return err
 		}
 	}
 	createNode1CSINodeInfo := func(client csiclientset.Interface) func() error {
 		return func() error {
-			nodeInfo := &csiv1alpha1.CSINodeInfo{
+			nodeInfo := &csiv1beta1.CSINodeInfo{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "node1",
 				},
-				CSIDrivers: []csiv1alpha1.CSIDriverInfo{
+				CSIDrivers: []csiv1beta1.CSIDriverInfo{
 					{
 						Driver:       "com.example.csi/driver1",
 						NodeID:       "com.example.csi/node1",
@@ -429,24 +428,24 @@ func TestNodeAuthorizer(t *testing.T) {
 					},
 				},
 			}
-			_, err := client.CsiV1alpha1().CSINodeInfos().Create(nodeInfo)
+			_, err := client.CsiV1beta1().CSINodeInfos().Create(nodeInfo)
 			return err
 		}
 	}
 	updateNode1CSINodeInfo := func(client csiclientset.Interface) func() error {
 		return func() error {
-			nodeInfo, err := client.CsiV1alpha1().CSINodeInfos().Get("node1", metav1.GetOptions{})
+			nodeInfo, err := client.CsiV1beta1().CSINodeInfos().Get("node1", metav1.GetOptions{})
 			if err != nil {
 				return err
 			}
-			nodeInfo.CSIDrivers = []csiv1alpha1.CSIDriverInfo{
+			nodeInfo.CSIDrivers = []csiv1beta1.CSIDriverInfo{
 				{
 					Driver:       "com.example.csi/driver1",
 					NodeID:       "com.example.csi/node1",
 					TopologyKeys: []string{"com.example.csi/rack"},
 				},
 			}
-			_, err = client.CsiV1alpha1().CSINodeInfos().Update(nodeInfo)
+			_, err = client.CsiV1beta1().CSINodeInfos().Update(nodeInfo)
 			return err
 		}
 	}
@@ -454,13 +453,13 @@ func TestNodeAuthorizer(t *testing.T) {
 		return func() error {
 			bs := []byte(fmt.Sprintf(`{"csiDrivers": [ { "driver": "net.example.storage/driver2", "nodeID": "net.example.storage/node1", "topologyKeys": [ "net.example.storage/region" ] } ] }`))
 			// StrategicMergePatch is unsupported by CRs. Falling back to MergePatch
-			_, err := client.CsiV1alpha1().CSINodeInfos().Patch("node1", types.MergePatchType, bs)
+			_, err := client.CsiV1beta1().CSINodeInfos().Patch("node1", types.MergePatchType, bs)
 			return err
 		}
 	}
 	deleteNode1CSINodeInfo := func(client csiclientset.Interface) func() error {
 		return func() error {
-			return client.CsiV1alpha1().CSINodeInfos().Delete("node1", &metav1.DeleteOptions{})
+			return client.CsiV1beta1().CSINodeInfos().Delete("node1", &metav1.DeleteOptions{})
 		}
 	}
 

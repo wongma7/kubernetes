@@ -32,7 +32,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	"k8s.io/client-go/util/retry"
-	csiv1alpha1 "k8s.io/csi-api/pkg/apis/csi/v1alpha1"
+	csiv1beta1 "k8s.io/csi-api/pkg/apis/csi/v1beta1"
 	"k8s.io/kubernetes/pkg/features"
 	"k8s.io/kubernetes/pkg/volume"
 	"k8s.io/kubernetes/pkg/volume/util"
@@ -327,7 +327,7 @@ func (nim *nodeInfoManager) updateCSINodeInfo(
 	}
 
 	retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		nodeInfo, err := csiKubeClient.CsiV1alpha1().CSINodeInfos().Get(string(nim.nodeName), metav1.GetOptions{})
+		nodeInfo, err := csiKubeClient.CsiV1beta1().CSINodeInfos().Get(string(nim.nodeName), metav1.GetOptions{})
 		if nodeInfo == nil || errors.IsNotFound(err) {
 			return nim.createNodeInfoObject(driverName, driverNodeID, topology)
 		}
@@ -370,7 +370,7 @@ func (nim *nodeInfoManager) createNodeInfoObject(
 		return err // do not wrap error
 	}
 
-	nodeInfo := &csiv1alpha1.CSINodeInfo{
+	nodeInfo := &csiv1beta1.CSINodeInfo{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: string(nim.nodeName),
 			OwnerReferences: []metav1.OwnerReference{
@@ -382,7 +382,7 @@ func (nim *nodeInfoManager) createNodeInfoObject(
 				},
 			},
 		},
-		CSIDrivers: []csiv1alpha1.CSIDriverInfo{
+		CSIDrivers: []csiv1beta1.CSIDriverInfo{
 			{
 				Driver:       driverName,
 				NodeID:       driverNodeID,
@@ -391,12 +391,12 @@ func (nim *nodeInfoManager) createNodeInfoObject(
 		},
 	}
 
-	_, err = csiKubeClient.CsiV1alpha1().CSINodeInfos().Create(nodeInfo)
+	_, err = csiKubeClient.CsiV1beta1().CSINodeInfos().Create(nodeInfo)
 	return err // do not wrap error
 }
 
 func (nim *nodeInfoManager) updateNodeInfoObject(
-	nodeInfo *csiv1alpha1.CSINodeInfo,
+	nodeInfo *csiv1beta1.CSINodeInfo,
 	driverName string,
 	driverNodeID string,
 	topology *csipb.Topology) error {
@@ -415,7 +415,7 @@ func (nim *nodeInfoManager) updateNodeInfoObject(
 
 	// Clone driver list, omitting the driver that matches the given driverName,
 	// unless the driver is identical to information provided, in which case no update is necessary.
-	var newDriverInfos []csiv1alpha1.CSIDriverInfo
+	var newDriverInfos []csiv1beta1.CSIDriverInfo
 	for _, driverInfo := range nodeInfo.CSIDrivers {
 		if driverInfo.Driver == driverName {
 			prevTopologyKeys := sets.NewString(driverInfo.TopologyKeys...)
@@ -430,7 +430,7 @@ func (nim *nodeInfoManager) updateNodeInfoObject(
 	}
 
 	// Append new driver
-	driverInfo := csiv1alpha1.CSIDriverInfo{
+	driverInfo := csiv1beta1.CSIDriverInfo{
 		Driver:       driverName,
 		NodeID:       driverNodeID,
 		TopologyKeys: topologyKeys.List(),
@@ -438,7 +438,7 @@ func (nim *nodeInfoManager) updateNodeInfoObject(
 	newDriverInfos = append(newDriverInfos, driverInfo)
 	nodeInfo.CSIDrivers = newDriverInfos
 
-	_, err := csiKubeClient.CsiV1alpha1().CSINodeInfos().Update(nodeInfo)
+	_, err := csiKubeClient.CsiV1beta1().CSINodeInfos().Update(nodeInfo)
 	return err // do not wrap error
 }
 
@@ -450,7 +450,7 @@ func (nim *nodeInfoManager) removeCSINodeInfo(csiDriverName string) error {
 			return fmt.Errorf("error getting CSI client")
 		}
 
-		nodeInfoClient := csiKubeClient.CsiV1alpha1().CSINodeInfos()
+		nodeInfoClient := csiKubeClient.CsiV1beta1().CSINodeInfos()
 		nodeInfo, err := nodeInfoClient.Get(string(nim.nodeName), metav1.GetOptions{})
 		if nodeInfo == nil || errors.IsNotFound(err) {
 			// do nothing
@@ -461,7 +461,7 @@ func (nim *nodeInfoManager) removeCSINodeInfo(csiDriverName string) error {
 		}
 
 		// Remove matching driver from driver list
-		var newDriverInfos []csiv1alpha1.CSIDriverInfo
+		var newDriverInfos []csiv1beta1.CSIDriverInfo
 		for _, driverInfo := range nodeInfo.CSIDrivers {
 			if driverInfo.Driver != csiDriverName {
 				newDriverInfos = append(newDriverInfos, driverInfo)

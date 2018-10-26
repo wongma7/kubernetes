@@ -17,10 +17,11 @@ limitations under the License.
 package crd
 
 import (
+	"reflect"
+
 	apiextensionsv1beta1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	csiapiv1alpha1 "k8s.io/csi-api/pkg/apis/csi/v1alpha1"
-	"reflect"
+	csiapiv1beta1 "k8s.io/csi-api/pkg/apis/csi/v1beta1"
 )
 
 // NOTE: the CRD functions here and the associated unit tests are non-ideal temporary measures in
@@ -31,12 +32,27 @@ import (
 func CSIDriverCRD() *apiextensionsv1beta1.CustomResourceDefinition {
 	return &apiextensionsv1beta1.CustomResourceDefinition{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: csiapiv1alpha1.CsiDriverResourcePlural + "." + csiapiv1alpha1.GroupName,
+			Name: csiapiv1beta1.CsiDriverResourcePlural + "." + csiapiv1beta1.GroupName,
+		},
+		Status: apiextensionsv1beta1.CustomResourceDefinitionStatus{
+			StoredVersions: []string{"v1beta1"},
 		},
 		Spec: apiextensionsv1beta1.CustomResourceDefinitionSpec{
-			Group:   csiapiv1alpha1.GroupName,
-			Version: csiapiv1alpha1.SchemeGroupVersion.Version,
-			Scope:   apiextensionsv1beta1.ClusterScoped,
+			Group:   csiapiv1beta1.GroupName,
+			Version: csiapiv1beta1.SchemeGroupVersion.Version,
+			Versions: []apiextensionsv1beta1.CustomResourceDefinitionVersion{
+				{
+					Name:    "v1beta1",
+					Served:  true,
+					Storage: true,
+				},
+				{
+					Name:    "v1alpha1",
+					Served:  false,
+					Storage: false,
+				},
+			},
+			Scope: apiextensionsv1beta1.ClusterScoped,
 			Validation: &apiextensionsv1beta1.CustomResourceValidation{
 				OpenAPIV3Schema: &apiextensionsv1beta1.JSONSchemaProps{
 					Properties: map[string]apiextensionsv1beta1.JSONSchemaProps{
@@ -60,8 +76,8 @@ func CSIDriverCRD() *apiextensionsv1beta1.CustomResourceDefinition {
 				},
 			},
 			Names: apiextensionsv1beta1.CustomResourceDefinitionNames{
-				Plural: csiapiv1alpha1.CsiDriverResourcePlural,
-				Kind:   reflect.TypeOf(csiapiv1alpha1.CSIDriver{}).Name(),
+				Plural: csiapiv1beta1.CsiDriverResourcePlural,
+				Kind:   reflect.TypeOf(csiapiv1beta1.CSIDriver{}).Name(),
 			},
 		},
 	}
@@ -71,12 +87,27 @@ func CSIDriverCRD() *apiextensionsv1beta1.CustomResourceDefinition {
 func CSINodeInfoCRD() *apiextensionsv1beta1.CustomResourceDefinition {
 	return &apiextensionsv1beta1.CustomResourceDefinition{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: csiapiv1alpha1.CsiNodeInfoResourcePlural + "." + csiapiv1alpha1.GroupName,
+			Name: csiapiv1beta1.CsiNodeInfoResourcePlural + "." + csiapiv1beta1.GroupName,
+		},
+		Status: apiextensionsv1beta1.CustomResourceDefinitionStatus{
+			StoredVersions: []string{"v1beta1"},
 		},
 		Spec: apiextensionsv1beta1.CustomResourceDefinitionSpec{
-			Group:   csiapiv1alpha1.GroupName,
-			Version: csiapiv1alpha1.SchemeGroupVersion.Version,
-			Scope:   apiextensionsv1beta1.ClusterScoped,
+			Group:   csiapiv1beta1.GroupName,
+			Version: csiapiv1beta1.SchemeGroupVersion.Version,
+			Versions: []apiextensionsv1beta1.CustomResourceDefinitionVersion{
+				{
+					Name:    "v1beta1",
+					Served:  true,
+					Storage: true,
+				},
+				{
+					Name:    "v1alpha1",
+					Served:  false,
+					Storage: false,
+				},
+			},
+			Scope: apiextensionsv1beta1.ClusterScoped,
 			Validation: &apiextensionsv1beta1.CustomResourceValidation{
 				OpenAPIV3Schema: &apiextensionsv1beta1.JSONSchemaProps{
 					Properties: map[string]apiextensionsv1beta1.JSONSchemaProps{
@@ -111,8 +142,8 @@ func CSINodeInfoCRD() *apiextensionsv1beta1.CustomResourceDefinition {
 				},
 			},
 			Names: apiextensionsv1beta1.CustomResourceDefinitionNames{
-				Plural: csiapiv1alpha1.CsiNodeInfoResourcePlural,
-				Kind:   reflect.TypeOf(csiapiv1alpha1.CSINodeInfo{}).Name(),
+				Plural: csiapiv1beta1.CsiNodeInfoResourcePlural,
+				Kind:   reflect.TypeOf(csiapiv1beta1.CSINodeInfo{}).Name(),
 			},
 		},
 	}

@@ -23,9 +23,8 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
-	"testing"
-
 	"reflect"
+	"testing"
 
 	"github.com/golang/glog"
 	api "k8s.io/api/core/v1"
@@ -36,7 +35,7 @@ import (
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	utilfeaturetesting "k8s.io/apiserver/pkg/util/feature/testing"
 	fakeclient "k8s.io/client-go/kubernetes/fake"
-	csiapi "k8s.io/csi-api/pkg/apis/csi/v1alpha1"
+	csiapi "k8s.io/csi-api/pkg/apis/csi/v1beta1"
 	fakecsi "k8s.io/csi-api/pkg/client/clientset/versioned/fake"
 	"k8s.io/kubernetes/pkg/features"
 	"k8s.io/kubernetes/pkg/volume"

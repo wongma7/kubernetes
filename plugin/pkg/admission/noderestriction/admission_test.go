@@ -17,11 +17,11 @@ limitations under the License.
 package noderestriction
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 	"time"
 
-	"fmt"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -31,7 +31,7 @@ import (
 	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	corev1lister "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
-	csiv1alpha1 "k8s.io/csi-api/pkg/apis/csi/v1alpha1"
+	csiv1beta1 "k8s.io/csi-api/pkg/apis/csi/v1beta1"
 	authenticationapi "k8s.io/kubernetes/pkg/apis/authentication"
 	"k8s.io/kubernetes/pkg/apis/coordination"
 	api "k8s.io/kubernetes/pkg/apis/core"
@@ -210,13 +210,13 @@ func Test_nodePlugin_Admit(t *testing.T) {
 			},
 		}
 
-		csiNodeInfoResource = csiv1alpha1.Resource("csinodeinfos").WithVersion("v1alpha1")
-		csiNodeInfoKind     = schema.GroupVersionKind{Group: "csi.storage.k8s.io", Version: "v1alpha1", Kind: "CSINodeInfo"}
-		nodeInfo            = &csiv1alpha1.CSINodeInfo{
+		csiNodeInfoResource = csiv1beta1.Resource("csinodeinfos").WithVersion("v1beta1")
+		csiNodeInfoKind     = schema.GroupVersionKind{Group: "csi.storage.k8s.io", Version: "v1beta1", Kind: "CSINodeInfo"}
+		nodeInfo            = &csiv1beta1.CSINodeInfo{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "mynode",
 			},
-			CSIDrivers: []csiv1alpha1.CSIDriverInfo{
+			CSIDrivers: []csiv1beta1.CSIDriverInfo{
 				{
 					Driver:       "com.example.csi/mydriver",
 					NodeID:       "com.example.csi/mynode",
@@ -224,11 +224,11 @@ func Test_nodePlugin_Admit(t *testing.T) {
 				},
 			},
 		}
-		nodeInfoWrongName = &csiv1alpha1.CSINodeInfo{
+		nodeInfoWrongName = &csiv1beta1.CSINodeInfo{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "foo",
 			},
-			CSIDrivers: []csiv1alpha1.CSIDriverInfo{
+			CSIDrivers: []csiv1beta1.CSIDriverInfo{
 				{
 					Driver:       "com.example.csi/mydriver",
 					NodeID:       "com.example.csi/foo",

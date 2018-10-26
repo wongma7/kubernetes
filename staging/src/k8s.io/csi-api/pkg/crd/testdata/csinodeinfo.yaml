@@ -28,10 +28,18 @@ spec:
                   type: string
                 type: array
           type: array
-  version: v1alpha1
+  version: v1beta1
+  versions:
+  - name: v1beta1
+    served: true
+    storage: true
+  - name: v1alpha1
+    served: false
+    storage: false
 status:
   acceptedNames:
     kind: ""
     plural: ""
   conditions: null
-  storedVersions: null
+  storedVersions:
+  - v1beta1

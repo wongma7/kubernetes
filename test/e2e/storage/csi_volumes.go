@@ -18,29 +18,27 @@ package storage
 
 import (
 	"context"
+	"crypto/sha256"
 	"fmt"
 	"math/rand"
 	"regexp"
 	"time"
 
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 	"k8s.io/api/core/v1"
 	storagev1 "k8s.io/api/storage/v1"
 	apiextensionsclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clientset "k8s.io/client-go/kubernetes"
-	csiv1alpha1 "k8s.io/csi-api/pkg/apis/csi/v1alpha1"
+	csiv1beta1 "k8s.io/csi-api/pkg/apis/csi/v1beta1"
 	csiclient "k8s.io/csi-api/pkg/client/clientset/versioned"
 	"k8s.io/kubernetes/test/e2e/framework"
 	"k8s.io/kubernetes/test/e2e/framework/podlogs"
 	"k8s.io/kubernetes/test/e2e/storage/testsuites"
 	"k8s.io/kubernetes/test/e2e/storage/utils"
 	imageutils "k8s.io/kubernetes/test/utils/image"
-
-	"crypto/sha256"
-
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 )
 
 type csiTestDriver interface {
@@ -200,7 +198,7 @@ var _ = utils.SIGDescribe("CSI Volumes", func() {
 				if test.driverExists {
 					driver := createCSIDriver(csics, "csi-hostpath-"+f.UniqueName, test.driverAttachable)
 					if driver != nil {
-						defer csics.CsiV1alpha1().CSIDrivers().Delete(driver.Name, nil)
+						defer csics.CsiV1beta1().CSIDrivers().Delete(driver.Name, nil)
 					}
 				}
 
@@ -247,17 +245,17 @@ var _ = utils.SIGDescribe("CSI Volumes", func() {
 	})
 })
 
-func createCSIDriver(csics csiclient.Interface, name string, attachable bool) *csiv1alpha1.CSIDriver {
+func createCSIDriver(csics csiclient.Interface, name string, attachable bool) *csiv1beta1.CSIDriver {
 	By("Creating CSIDriver instance")
-	driver := &csiv1alpha1.CSIDriver{
+	driver := &csiv1beta1.CSIDriver{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 		},
-		Spec: csiv1alpha1.CSIDriverSpec{
+		Spec: csiv1beta1.CSIDriverSpec{
 			AttachRequired: &attachable,
 		},
 	}
-	driver, err := csics.CsiV1alpha1().CSIDrivers().Create(driver)
+	driver, err := csics.CsiV1beta1().CSIDrivers().Create(driver)
 	framework.ExpectNoError(err, "Failed to create CSIDriver: %v", err)
 	return driver
 }

@@ -31,7 +31,7 @@ import (
 	utilfeaturetesting "k8s.io/apiserver/pkg/util/feature/testing"
 	"k8s.io/client-go/kubernetes/fake"
 	utiltesting "k8s.io/client-go/util/testing"
-	csiv1alpha1 "k8s.io/csi-api/pkg/apis/csi/v1alpha1"
+	csiv1beta1 "k8s.io/csi-api/pkg/apis/csi/v1beta1"
 	csifake "k8s.io/csi-api/pkg/client/clientset/versioned/fake"
 	"k8s.io/kubernetes/pkg/apis/core/helper"
 	v1helper "k8s.io/kubernetes/pkg/apis/core/v1/helper"
@@ -44,7 +44,7 @@ type testcase struct {
 	name                string
 	driverName          string
 	existingNode        *v1.Node
-	existingNodeInfo    *csiv1alpha1.CSINodeInfo
+	existingNodeInfo    *csiv1beta1.CSINodeInfo
 	inputNodeID         string
 	inputTopology       *csi.Topology
 	inputVolumeLimit    int64
@@ -788,10 +788,10 @@ func generateNode(nodeIDs, labels map[string]string, capacity map[v1.ResourceNam
 	return node
 }
 
-func generateNodeInfo(nodeIDs map[string]string, topologyKeys map[string][]string) *csiv1alpha1.CSINodeInfo {
-	var drivers []csiv1alpha1.CSIDriverInfo
+func generateNodeInfo(nodeIDs map[string]string, topologyKeys map[string][]string) *csiv1beta1.CSINodeInfo {
+	var drivers []csiv1beta1.CSIDriverInfo
 	for k, nodeID := range nodeIDs {
-		d := csiv1alpha1.CSIDriverInfo{
+		d := csiv1beta1.CSIDriverInfo{
 			Driver: k,
 			NodeID: nodeID,
 		}
@@ -800,7 +800,7 @@ func generateNodeInfo(nodeIDs map[string]string, topologyKeys map[string][]strin
 		}
 		drivers = append(drivers, d)
 	}
-	return &csiv1alpha1.CSINodeInfo{
+	return &csiv1beta1.CSINodeInfo{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "node1",
 		},
