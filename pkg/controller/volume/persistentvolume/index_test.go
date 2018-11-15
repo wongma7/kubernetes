@@ -33,6 +33,7 @@ import (
 )
 
 func makePVC(size string, modfn func(*v1.PersistentVolumeClaim)) *v1.PersistentVolumeClaim {
+	fs := v1.PersistentVolumeFilesystem
 	pvc := v1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "claim01",
@@ -45,6 +46,7 @@ func makePVC(size string, modfn func(*v1.PersistentVolumeClaim)) *v1.PersistentV
 					v1.ResourceName(v1.ResourceStorage): resource.MustParse(size),
 				},
 			},
+			VolumeMode: &fs,
 		},
 	}
 	if modfn != nil {
@@ -197,6 +199,7 @@ func TestMatchVolume(t *testing.T) {
 }
 
 func TestMatchingWithBoundVolumes(t *testing.T) {
+	fs := v1.PersistentVolumeFilesystem
 	volumeIndex := newPersistentVolumeOrderedIndex()
 	// two similar volumes, one is bound
 	pv1 := &v1.PersistentVolume{
@@ -213,7 +216,8 @@ func TestMatchingWithBoundVolumes(t *testing.T) {
 			},
 			AccessModes: []v1.PersistentVolumeAccessMode{v1.ReadWriteOnce, v1.ReadOnlyMany},
 			// this one we're pretending is already bound
-			ClaimRef: &v1.ObjectReference{UID: "abc123"},
+			ClaimRef:   &v1.ObjectReference{UID: "abc123"},
+			VolumeMode: &fs,
 		},
 		Status: v1.PersistentVolumeStatus{
 			Phase: v1.VolumeBound,
@@ -233,6 +237,7 @@ func TestMatchingWithBoundVolumes(t *testing.T) {
 				GCEPersistentDisk: &v1.GCEPersistentDiskVolumeSource{},
 			},
 			AccessModes: []v1.PersistentVolumeAccessMode{v1.ReadWriteOnce, v1.ReadOnlyMany},
+			VolumeMode:  &fs,
 		},
 		Status: v1.PersistentVolumeStatus{
 			Phase: v1.VolumeAvailable,
@@ -254,6 +259,7 @@ func TestMatchingWithBoundVolumes(t *testing.T) {
 					v1.ResourceName(v1.ResourceStorage): resource.MustParse("1G"),
 				},
 			},
+			VolumeMode: &fs,
 		},
 	}
 
@@ -328,6 +334,7 @@ func TestAllPossibleAccessModes(t *testing.T) {
 }
 
 func TestFindingVolumeWithDifferentAccessModes(t *testing.T) {
+	fs := v1.PersistentVolumeFilesystem
 	gce := &v1.PersistentVolume{
 		ObjectMeta: metav1.ObjectMeta{UID: "001", Name: "gce"},
 		Spec: v1.PersistentVolumeSpec{
@@ -337,6 +344,7 @@ func TestFindingVolumeWithDifferentAccessModes(t *testing.T) {
 				v1.ReadWriteOnce,
 				v1.ReadOnlyMany,
 			},
+			VolumeMode: &fs,
 		},
 		Status: v1.PersistentVolumeStatus{
 			Phase: v1.VolumeAvailable,
@@ -351,6 +359,7 @@ func TestFindingVolumeWithDifferentAccessModes(t *testing.T) {
 			AccessModes: []v1.PersistentVolumeAccessMode{
 				v1.ReadWriteOnce,
 			},
+			VolumeMode: &fs,
 		},
 		Status: v1.PersistentVolumeStatus{
 			Phase: v1.VolumeAvailable,
@@ -367,6 +376,7 @@ func TestFindingVolumeWithDifferentAccessModes(t *testing.T) {
 				v1.ReadOnlyMany,
 				v1.ReadWriteMany,
 			},
+			VolumeMode: &fs,
 		},
 		Status: v1.PersistentVolumeStatus{
 			Phase: v1.VolumeAvailable,
@@ -381,6 +391,7 @@ func TestFindingVolumeWithDifferentAccessModes(t *testing.T) {
 		Spec: v1.PersistentVolumeClaimSpec{
 			AccessModes: []v1.PersistentVolumeAccessMode{v1.ReadWriteOnce},
 			Resources:   v1.ResourceRequirements{Requests: v1.ResourceList{v1.ResourceName(v1.ResourceStorage): resource.MustParse("1G")}},
+			VolumeMode:  &fs,
 		},
 	}
 
@@ -440,6 +451,7 @@ func TestFindingVolumeWithDifferentAccessModes(t *testing.T) {
 }
 
 func createTestVolumes() []*v1.PersistentVolume {
+	fs := v1.PersistentVolumeFilesystem
 	// these volumes are deliberately out-of-order to test indexing and sorting
 	return []*v1.PersistentVolume{
 		{
@@ -458,6 +470,7 @@ func createTestVolumes() []*v1.PersistentVolume {
 					v1.ReadWriteOnce,
 					v1.ReadOnlyMany,
 				},
+				VolumeMode: &fs,
 			},
 			Status: v1.PersistentVolumeStatus{
 				Phase: v1.VolumeAvailable,
@@ -480,7 +493,8 @@ func createTestVolumes() []*v1.PersistentVolume {
 					v1.ReadOnlyMany,
 				},
 				// this one we're pretending is already bound
-				ClaimRef: &v1.ObjectReference{UID: "def456"},
+				ClaimRef:   &v1.ObjectReference{UID: "def456"},
+				VolumeMode: &fs,
 			},
 			Status: v1.PersistentVolumeStatus{
 				Phase: v1.VolumeBound,
@@ -503,6 +517,7 @@ func createTestVolumes() []*v1.PersistentVolume {
 					v1.ReadOnlyMany,
 					v1.ReadWriteMany,
 				},
+				VolumeMode: &fs,
 			},
 			Status: v1.PersistentVolumeStatus{
 				Phase: v1.VolumeAvailable,
@@ -525,7 +540,8 @@ func createTestVolumes() []*v1.PersistentVolume {
 					v1.ReadOnlyMany,
 				},
 				// this one we're pretending is already bound
-				ClaimRef: &v1.ObjectReference{UID: "abc123"},
+				ClaimRef:   &v1.ObjectReference{UID: "abc123"},
+				VolumeMode: &fs,
 			},
 			Status: v1.PersistentVolumeStatus{
 				Phase: v1.VolumeBound,
@@ -548,6 +564,7 @@ func createTestVolumes() []*v1.PersistentVolume {
 					v1.ReadOnlyMany,
 					v1.ReadWriteMany,
 				},
+				VolumeMode: &fs,
 			},
 			Status: v1.PersistentVolumeStatus{
 				Phase: v1.VolumeAvailable,
@@ -569,6 +586,7 @@ func createTestVolumes() []*v1.PersistentVolume {
 					v1.ReadWriteOnce,
 					v1.ReadOnlyMany,
 				},
+				VolumeMode: &fs,
 			},
 			Status: v1.PersistentVolumeStatus{
 				Phase: v1.VolumeAvailable,
@@ -591,6 +609,7 @@ func createTestVolumes() []*v1.PersistentVolume {
 					v1.ReadOnlyMany,
 					v1.ReadWriteMany,
 				},
+				VolumeMode: &fs,
 			},
 			Status: v1.PersistentVolumeStatus{
 				Phase: v1.VolumeAvailable,
@@ -614,6 +633,7 @@ func createTestVolumes() []*v1.PersistentVolume {
 				AccessModes: []v1.PersistentVolumeAccessMode{
 					v1.ReadWriteOnce,
 				},
+				VolumeMode: &fs,
 			},
 			Status: v1.PersistentVolumeStatus{
 				Phase: v1.VolumeAvailable,
@@ -638,6 +658,7 @@ func createTestVolumes() []*v1.PersistentVolume {
 					v1.ReadWriteOnce,
 				},
 				StorageClassName: classSilver,
+				VolumeMode:       &fs,
 			},
 			Status: v1.PersistentVolumeStatus{
 				Phase: v1.VolumeAvailable,
@@ -659,6 +680,7 @@ func createTestVolumes() []*v1.PersistentVolume {
 					v1.ReadWriteOnce,
 				},
 				StorageClassName: classSilver,
+				VolumeMode:       &fs,
 			},
 			Status: v1.PersistentVolumeStatus{
 				Phase: v1.VolumeAvailable,
@@ -680,6 +702,7 @@ func createTestVolumes() []*v1.PersistentVolume {
 					v1.ReadWriteOnce,
 				},
 				StorageClassName: classGold,
+				VolumeMode:       &fs,
 			},
 			Status: v1.PersistentVolumeStatus{
 				Phase: v1.VolumeAvailable,
@@ -703,6 +726,7 @@ func createTestVolumes() []*v1.PersistentVolume {
 					v1.ReadWriteMany,
 				},
 				StorageClassName: classLarge,
+				VolumeMode:       &fs,
 			},
 			Status: v1.PersistentVolumeStatus{
 				Phase: v1.VolumeAvailable,
@@ -726,6 +750,7 @@ func createTestVolumes() []*v1.PersistentVolume {
 					v1.ReadWriteMany,
 				},
 				StorageClassName: classLarge,
+				VolumeMode:       &fs,
 			},
 			Status: v1.PersistentVolumeStatus{
 				Phase: v1.VolumeAvailable,
@@ -749,6 +774,7 @@ func createTestVolumes() []*v1.PersistentVolume {
 				},
 				StorageClassName: classWait,
 				NodeAffinity:     getVolumeNodeAffinity("key1", "value1"),
+				VolumeMode:       &fs,
 			},
 			Status: v1.PersistentVolumeStatus{
 				Phase: v1.VolumeAvailable,
@@ -772,6 +798,7 @@ func createTestVolumes() []*v1.PersistentVolume {
 				},
 				StorageClassName: classWait,
 				NodeAffinity:     getVolumeNodeAffinity("key1", "value1"),
+				VolumeMode:       &fs,
 			},
 			Status: v1.PersistentVolumeStatus{
 				Phase: v1.VolumeAvailable,
@@ -796,6 +823,7 @@ func createTestVolumes() []*v1.PersistentVolume {
 				StorageClassName: classWait,
 				ClaimRef:         &v1.ObjectReference{Name: "claim02", Namespace: "myns"},
 				NodeAffinity:     getVolumeNodeAffinity("key1", "value1"),
+				VolumeMode:       &fs,
 			},
 			Status: v1.PersistentVolumeStatus{
 				Phase: v1.VolumeAvailable,
@@ -819,6 +847,7 @@ func createTestVolumes() []*v1.PersistentVolume {
 				},
 				StorageClassName: classWait,
 				NodeAffinity:     getVolumeNodeAffinity("key1", "value3"),
+				VolumeMode:       &fs,
 			},
 			Status: v1.PersistentVolumeStatus{
 				Phase: v1.VolumeAvailable,
@@ -842,6 +871,7 @@ func createTestVolumes() []*v1.PersistentVolume {
 				},
 				StorageClassName: classWait,
 				NodeAffinity:     getVolumeNodeAffinity("key1", "value4"),
+				VolumeMode:       &fs,
 			},
 			Status: v1.PersistentVolumeStatus{
 				Phase: v1.VolumePending,
@@ -865,6 +895,7 @@ func createTestVolumes() []*v1.PersistentVolume {
 				},
 				StorageClassName: classWait,
 				NodeAffinity:     getVolumeNodeAffinity("key1", "value4"),
+				VolumeMode:       &fs,
 			},
 			Status: v1.PersistentVolumeStatus{
 				Phase: v1.VolumeFailed,
@@ -888,6 +919,7 @@ func createTestVolumes() []*v1.PersistentVolume {
 				},
 				StorageClassName: classWait,
 				NodeAffinity:     getVolumeNodeAffinity("key1", "value4"),
+				VolumeMode:       &fs,
 			},
 			Status: v1.PersistentVolumeStatus{
 				Phase: v1.VolumeReleased,
@@ -911,12 +943,14 @@ func createTestVolumes() []*v1.PersistentVolume {
 				},
 				StorageClassName: classWait,
 				NodeAffinity:     getVolumeNodeAffinity("key1", "value4"),
+				VolumeMode:       &fs,
 			},
 		},
 	}
 }
 
 func testVolume(name, size string) *v1.PersistentVolume {
+	fs := v1.PersistentVolumeFilesystem
 	return &v1.PersistentVolume{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        name,
@@ -926,6 +960,7 @@ func testVolume(name, size string) *v1.PersistentVolume {
 			Capacity:               v1.ResourceList{v1.ResourceName(v1.ResourceStorage): resource.MustParse(size)},
 			PersistentVolumeSource: v1.PersistentVolumeSource{HostPath: &v1.HostPathVolumeSource{}},
 			AccessModes:            []v1.PersistentVolumeAccessMode{v1.ReadWriteOnce},
+			VolumeMode:             &fs,
 		},
 		Status: v1.PersistentVolumeStatus{
 			Phase: v1.VolumeAvailable,
@@ -1009,6 +1044,7 @@ func createTestVolOrderedIndex(pv *v1.PersistentVolume) persistentVolumeOrderedI
 	return volFile
 }
 
+// TODO remove this and use SetFeatureGateDuringTest instead
 func toggleFeature(toggleFlag bool, featureName string, t *testing.T) {
 	var valueStr string
 	if toggleFlag {
@@ -1094,7 +1130,7 @@ func TestVolumeModeCheck(t *testing.T) {
 	}
 
 	for name, scenario := range scenarios {
-		toggleFeature(scenario.enableBlock, "BlockVolume", t)
+		recover := utilfeaturetesting.SetFeatureGateDuringTest(t, utilfeature.DefaultFeatureGate, features.BlockVolume, scenario.enableBlock)
 		expectedMismatch, err := checkVolumeModeMismatches(&scenario.pvc.Spec, &scenario.vol.Spec)
 		if err != nil {
 			t.Errorf("Unexpected failure for checkVolumeModeMismatches: %v", err)
@@ -1106,10 +1142,8 @@ func TestVolumeModeCheck(t *testing.T) {
 		if !expectedMismatch && scenario.isExpectedMismatch {
 			t.Errorf("Unexpected failure for scenario, did not mismatch on mode when expected to mismatch: %s", name)
 		}
+		recover()
 	}
-
-	// make sure feature gate is turned off
-	toggleFeature(false, "BlockVolume", t)
 }
 
 func TestFilteringVolumeModes(t *testing.T) {
@@ -1187,7 +1221,7 @@ func TestFilteringVolumeModes(t *testing.T) {
 	}
 
 	for name, scenario := range scenarios {
-		toggleFeature(scenario.enableBlock, "BlockVolume", t)
+		recover := utilfeaturetesting.SetFeatureGateDuringTest(t, utilfeature.DefaultFeatureGate, features.BlockVolume, scenario.enableBlock)
 		pvmatch, err := scenario.vol.findBestMatchForClaim(scenario.pvc, false)
 		// expected to match but either got an error or no returned pvmatch
 		if pvmatch == nil && scenario.isExpectedMatch {
@@ -1203,13 +1237,12 @@ func TestFilteringVolumeModes(t *testing.T) {
 		if err != nil && !scenario.isExpectedMatch {
 			t.Errorf("Unexpected failure for scenario: %s - %+v", name, err)
 		}
+		recover()
 	}
-
-	// make sure feature gate is turned off
-	toggleFeature(false, "BlockVolume", t)
 }
 
 func TestStorageObjectInUseProtectionFiltering(t *testing.T) {
+	fs := v1.PersistentVolumeFilesystem
 	pv := &v1.PersistentVolume{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        "pv1",
@@ -1219,6 +1252,7 @@ func TestStorageObjectInUseProtectionFiltering(t *testing.T) {
 			Capacity:               v1.ResourceList{v1.ResourceName(v1.ResourceStorage): resource.MustParse("1G")},
 			PersistentVolumeSource: v1.PersistentVolumeSource{HostPath: &v1.HostPathVolumeSource{}},
 			AccessModes:            []v1.PersistentVolumeAccessMode{v1.ReadWriteOnce},
+			VolumeMode:             &fs,
 		},
 		Status: v1.PersistentVolumeStatus{
 			Phase: v1.VolumeAvailable,
@@ -1237,6 +1271,7 @@ func TestStorageObjectInUseProtectionFiltering(t *testing.T) {
 		Spec: v1.PersistentVolumeClaimSpec{
 			AccessModes: []v1.PersistentVolumeAccessMode{v1.ReadWriteOnce},
 			Resources:   v1.ResourceRequirements{Requests: v1.ResourceList{v1.ResourceName(v1.ResourceStorage): resource.MustParse("1G")}},
+			VolumeMode:  &fs,
 		},
 	}
 
@@ -1343,6 +1378,7 @@ func TestStorageObjectInUseProtectionFiltering(t *testing.T) {
 }
 
 func TestFindingPreboundVolumes(t *testing.T) {
+	fs := v1.PersistentVolumeFilesystem
 	claim := &v1.PersistentVolumeClaim{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "claim01",
@@ -1352,6 +1388,7 @@ func TestFindingPreboundVolumes(t *testing.T) {
 		Spec: v1.PersistentVolumeClaimSpec{
 			AccessModes: []v1.PersistentVolumeAccessMode{v1.ReadWriteOnce},
 			Resources:   v1.ResourceRequirements{Requests: v1.ResourceList{v1.ResourceName(v1.ResourceStorage): resource.MustParse("1Gi")}},
+			VolumeMode:  &fs,
 		},
 	}
 	claimRef, err := ref.GetReference(scheme.Scheme, claim)

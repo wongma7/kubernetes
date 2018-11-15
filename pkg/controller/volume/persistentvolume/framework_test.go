@@ -38,6 +38,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/diff"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/apimachinery/pkg/watch"
+	utilfeature "k8s.io/apiserver/pkg/util/feature"
 	"k8s.io/client-go/informers"
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/fake"
@@ -48,6 +49,7 @@ import (
 	"k8s.io/client-go/tools/record"
 	"k8s.io/kubernetes/pkg/api/testapi"
 	"k8s.io/kubernetes/pkg/controller"
+	"k8s.io/kubernetes/pkg/features"
 	vol "k8s.io/kubernetes/pkg/volume"
 	"k8s.io/kubernetes/pkg/volume/util/recyclerclient"
 )
@@ -177,6 +179,12 @@ func (r *volumeReactor) React(action core.Action) (handled bool, ret runtime.Obj
 		_, found := r.volumes[volume.Name]
 		if found {
 			return true, nil, fmt.Errorf("Cannot create volume %s: volume already exists", volume.Name)
+		}
+
+		// mimic apiserver defaulting
+		if volume.Spec.VolumeMode == nil && utilfeature.DefaultFeatureGate.Enabled(features.BlockVolume) {
+			volume.Spec.VolumeMode = new(v1.PersistentVolumeMode)
+			*volume.Spec.VolumeMode = v1.PersistentVolumeFilesystem
 		}
 
 		// Store the updated object to appropriate places.
@@ -384,10 +392,12 @@ func checkEvents(t *testing.T, expectedEvents []string, ctrl *PersistentVolumeCo
 			} else {
 				klog.V(5).Infof("event recorder finished")
 				finished = true
+				break
 			}
-		case _, _ = <-timer.C:
+		case <-timer.C:
 			klog.V(5).Infof("event recorder timeout")
 			finished = true
+			break
 		}
 	}
 
