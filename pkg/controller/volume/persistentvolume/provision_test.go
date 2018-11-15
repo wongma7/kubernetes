@@ -24,7 +24,10 @@ import (
 	storage "k8s.io/api/storage/v1"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	utilfeature "k8s.io/apiserver/pkg/util/feature"
+	utilfeaturetesting "k8s.io/apiserver/pkg/util/feature/testing"
 	api "k8s.io/kubernetes/pkg/apis/core"
+	"k8s.io/kubernetes/pkg/features"
 )
 
 var class1Parameters = map[string]string{
@@ -128,6 +131,8 @@ var provisionAlphaSuccess = provisionCall{
 // 2. Call the syncVolume *once*.
 // 3. Compare resulting volumes with expected volumes.
 func TestProvisionSync(t *testing.T) {
+	// TODO (#71091) modify these tests to work with the feature gate on OR modify code to tolerate nil StorageClass.VolumeBindingMode
+	defer utilfeaturetesting.SetFeatureGateDuringTest(t, utilfeature.DefaultFeatureGate, features.VolumeScheduling, false)()
 	tests := []controllerTest{
 		{
 			// Provision a volume (with a default class)
@@ -440,6 +445,8 @@ func TestProvisionSync(t *testing.T) {
 //    of volumes/claims with expected claims/volumes and report differences.
 // Some limit of calls in enforced to prevent endless loops.
 func TestProvisionMultiSync(t *testing.T) {
+	// TODO (#71091) modify these tests to work with the feature gate on OR modify code to tolerate nil StorageClass.VolumeBindingMode
+	defer utilfeaturetesting.SetFeatureGateDuringTest(t, utilfeature.DefaultFeatureGate, features.VolumeScheduling, false)()
 	tests := []controllerTest{
 		{
 			// Provision a volume with binding
@@ -457,6 +464,8 @@ func TestProvisionMultiSync(t *testing.T) {
 
 // When provisioning is disabled, provisioning a claim should instantly return nil
 func TestDisablingDynamicProvisioner(t *testing.T) {
+	// TODO (#71091) modify these tests to work with the feature gate on OR modify code to tolerate nil StorageClass.VolumeBindingMode
+	defer utilfeaturetesting.SetFeatureGateDuringTest(t, utilfeature.DefaultFeatureGate, features.VolumeScheduling, false)()
 	ctrl, err := newTestController(nil, nil, false)
 	if err != nil {
 		t.Fatalf("Construct PersistentVolume controller failed: %v", err)
