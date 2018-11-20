@@ -17,16 +17,19 @@ limitations under the License.
 package leaderelection
 
 import (
+	"encoding/json"
 	"fmt"
 	"sync"
 	"testing"
 	"time"
 
-	"k8s.io/api/core/v1"
+	coordinationv1 "k8s.io/api/coordination/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/clock"
+	fakecoordinationv1 "k8s.io/client-go/kubernetes/typed/coordination/v1/fake"
 	fakecorev1 "k8s.io/client-go/kubernetes/typed/core/v1/fake"
 	core "k8s.io/client-go/testing"
 	rl "k8s.io/client-go/tools/leaderelection/resourcelock"
@@ -36,9 +39,17 @@ import (
 func createLockObject(objectType string, objectMeta metav1.ObjectMeta) (obj runtime.Object) {
 	switch objectType {
 	case "endpoints":
-		obj = &v1.Endpoints{ObjectMeta: objectMeta}
+		obj = &corev1.Endpoints{ObjectMeta: objectMeta}
 	case "configmaps":
-		obj = &v1.ConfigMap{ObjectMeta: objectMeta}
+		obj = &corev1.ConfigMap{ObjectMeta: objectMeta}
+	case "leases":
+		lease := &coordinationv1.Lease{ObjectMeta: objectMeta}
+		var record rl.LeaderElectionRecord
+		if recordBytes, found := objectMeta.Annotations[rl.LeaderElectionRecordAnnotationKey]; found {
+			json.Unmarshal([]byte(recordBytes), &record)
+		}
+		lease.Spec = rl.LeaderElectionRecordToLeaseSpec(&record)
+		obj = lease
 	default:
 		panic("unexpected objType:" + objectType)
 	}
@@ -255,14 +266,17 @@ func testTryAcquireOrRenew(t *testing.T, objectType string) {
 				Identity:      "baz",
 				EventRecorder: &record.FakeRecorder{},
 			}
-			c := &fakecorev1.FakeCoreV1{Fake: &core.Fake{}}
+			fake := &core.Fake{}
 			for _, reactor := range test.reactors {
-				c.AddReactor(reactor.verb, objectType, reactor.reaction)
+				fake.AddReactor(reactor.verb, objectType, reactor.reaction)
 			}
-			c.AddReactor("*", "*", func(action core.Action) (bool, runtime.Object, error) {
+			fake.AddReactor("*", "*", func(action core.Action) (bool, runtime.Object, error) {
 				t.Errorf("unreachable action. testclient called too many times: %+v", action)
 				return true, nil, fmt.Errorf("unreachable action")
 			})
+
+			c := &fakecorev1.FakeCoreV1{Fake: fake}
+			co := &fakecoordinationv1.FakeCoordinationV1{Fake: fake}
 
 			switch objectType {
 			case "endpoints":
@@ -276,6 +290,12 @@ func testTryAcquireOrRenew(t *testing.T, objectType string) {
 					ConfigMapMeta: objectMeta,
 					LockConfig:    resourceLockConfig,
 					Client:        c,
+				}
+			case "leases":
+				lock = &rl.LeaseLock{
+					LeaseMeta:  objectMeta,
+					LockConfig: resourceLockConfig,
+					Client:     co,
 				}
 			}
 
@@ -327,4 +347,9 @@ func testTryAcquireOrRenew(t *testing.T, objectType string) {
 // Will test leader election using configmap as the resource
 func TestTryAcquireOrRenewConfigMaps(t *testing.T) {
 	testTryAcquireOrRenew(t, "configmaps")
+}
+
+// Will test leader election using lease as the resource
+func TestTryAcquireOrRenewLeases(t *testing.T) {
+	testTryAcquireOrRenew(t, "leases")
 }

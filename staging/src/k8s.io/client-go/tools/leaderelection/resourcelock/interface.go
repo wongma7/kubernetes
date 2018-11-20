@@ -21,6 +21,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	coordinationv1 "k8s.io/client-go/kubernetes/typed/coordination/v1"
 	corev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 )
 
@@ -112,4 +113,15 @@ func New(lockType string, ns string, name string, client corev1.CoreV1Interface,
 	default:
 		return nil, fmt.Errorf("Invalid lock-type %s", lockType)
 	}
+}
+
+func NewLeaseLock(ns string, name string, client coordinationv1.CoordinationV1Interface, rlc ResourceLockConfig) (Interface, error) {
+	return &LeaseLock{
+		LeaseMeta: metav1.ObjectMeta{
+			Namespace: ns,
+			Name:      name,
+		},
+		Client:     client,
+		LockConfig: rlc,
+	}, nil
 }
