@@ -42,25 +42,7 @@ func (ll *LeaseLock) Get() (*LeaderElectionRecord, error) {
 	if err != nil {
 		return nil, err
 	}
-	holderIdentity := ""
-	if ll.lease.Spec.HolderIdentity != nil {
-		holderIdentity = *ll.lease.Spec.HolderIdentity
-	}
-	leaseDurationSeconds := 0
-	if ll.lease.Spec.LeaseDurationSeconds != nil {
-		leaseDurationSeconds = int(*ll.lease.Spec.LeaseDurationSeconds)
-	}
-	leaseTransitions := 0
-	if ll.lease.Spec.LeaseTransitions != nil {
-		leaseTransitions = int(*ll.lease.Spec.LeaseTransitions)
-	}
-	return &LeaderElectionRecord{
-		HolderIdentity:       holderIdentity,
-		LeaseDurationSeconds: leaseDurationSeconds,
-		AcquireTime:          metav1.Time{ll.lease.Spec.AcquireTime.Time},
-		RenewTime:            metav1.Time{ll.lease.Spec.RenewTime.Time},
-		LeaderTransitions:    leaseTransitions,
-	}, nil
+	return LeaseSpecToLeaderElectionRecord(&ll.lease.Spec), nil
 }
 
 // Create attempts to create a Lease
@@ -89,6 +71,9 @@ func (ll *LeaseLock) Update(ler LeaderElectionRecord) error {
 
 // RecordEvent in leader election while adding meta-data
 func (ll *LeaseLock) RecordEvent(s string) {
+	if ll.LockConfig.EventRecorder == nil {
+		return
+	}
 	events := fmt.Sprintf("%v %v", ll.LockConfig.Identity, s)
 	ll.LockConfig.EventRecorder.Eventf(&coordinationv1.Lease{ObjectMeta: ll.lease.ObjectMeta}, corev1.EventTypeNormal, "LeaderElection", events)
 }
@@ -102,6 +87,28 @@ func (ll *LeaseLock) Describe() string {
 // returns the Identity of the lock
 func (ll *LeaseLock) Identity() string {
 	return ll.LockConfig.Identity
+}
+
+func LeaseSpecToLeaderElectionRecord(spec *coordinationv1.LeaseSpec) *LeaderElectionRecord {
+	holderIdentity := ""
+	if spec.HolderIdentity != nil {
+		holderIdentity = *spec.HolderIdentity
+	}
+	leaseDurationSeconds := 0
+	if spec.LeaseDurationSeconds != nil {
+		leaseDurationSeconds = int(*spec.LeaseDurationSeconds)
+	}
+	leaseTransitions := 0
+	if spec.LeaseTransitions != nil {
+		leaseTransitions = int(*spec.LeaseTransitions)
+	}
+	return &LeaderElectionRecord{
+		HolderIdentity:       holderIdentity,
+		LeaseDurationSeconds: leaseDurationSeconds,
+		AcquireTime:          metav1.Time{spec.AcquireTime.Time},
+		RenewTime:            metav1.Time{spec.RenewTime.Time},
+		LeaderTransitions:    leaseTransitions,
+	}
 }
 
 func LeaderElectionRecordToLeaseSpec(ler *LeaderElectionRecord) coordinationv1.LeaseSpec {

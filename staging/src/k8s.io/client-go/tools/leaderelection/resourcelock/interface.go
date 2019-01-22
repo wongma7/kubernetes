@@ -29,6 +29,7 @@ const (
 	LeaderElectionRecordAnnotationKey = "control-plane.alpha.kubernetes.io/leader"
 	EndpointsResourceLock             = "endpoints"
 	ConfigMapsResourceLock            = "configmaps"
+	LeasesResourceLock                = "leases"
 )
 
 // LeaderElectionRecord is the record that is stored in the leader election annotation.
@@ -90,7 +91,7 @@ type Interface interface {
 }
 
 // Manufacture will create a lock of a given type according to the input parameters
-func New(lockType string, ns string, name string, client corev1.CoreV1Interface, rlc ResourceLockConfig) (Interface, error) {
+func New(lockType string, ns string, name string, coreClient corev1.CoreV1Interface, coordinationClient coordinationv1.CoordinationV1Interface, rlc ResourceLockConfig) (Interface, error) {
 	switch lockType {
 	case EndpointsResourceLock:
 		return &EndpointsLock{
@@ -98,7 +99,7 @@ func New(lockType string, ns string, name string, client corev1.CoreV1Interface,
 				Namespace: ns,
 				Name:      name,
 			},
-			Client:     client,
+			Client:     coreClient,
 			LockConfig: rlc,
 		}, nil
 	case ConfigMapsResourceLock:
@@ -107,21 +108,19 @@ func New(lockType string, ns string, name string, client corev1.CoreV1Interface,
 				Namespace: ns,
 				Name:      name,
 			},
-			Client:     client,
+			Client:     coreClient,
+			LockConfig: rlc,
+		}, nil
+	case LeasesResourceLock:
+		return &LeaseLock{
+			LeaseMeta: metav1.ObjectMeta{
+				Namespace: ns,
+				Name:      name,
+			},
+			Client:     coordinationClient,
 			LockConfig: rlc,
 		}, nil
 	default:
 		return nil, fmt.Errorf("Invalid lock-type %s", lockType)
 	}
-}
-
-func NewLeaseLock(ns string, name string, client coordinationv1.CoordinationV1Interface, rlc ResourceLockConfig) (Interface, error) {
-	return &LeaseLock{
-		LeaseMeta: metav1.ObjectMeta{
-			Namespace: ns,
-			Name:      name,
-		},
-		Client:     client,
-		LockConfig: rlc,
-	}, nil
 }
