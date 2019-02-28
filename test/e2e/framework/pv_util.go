@@ -883,6 +883,8 @@ func CreateSecPodWithNodeName(client clientset.Interface, namespace string, pvcl
 	// Setting nodeName
 	pod.Spec.NodeName = nodeName
 
+	Logf("Config for pod: %+v", pod)
+
 	pod, err := client.CoreV1().Pods(namespace).Create(pod)
 	if err != nil {
 		return nil, fmt.Errorf("pod Create API error: %v", err)
@@ -891,6 +893,10 @@ func CreateSecPodWithNodeName(client clientset.Interface, namespace string, pvcl
 	// Waiting for pod to be running
 	err = WaitTimeoutForPodRunningInNamespace(client, pod.Name, namespace, timeout)
 	if err != nil {
+		errPod, getErr := client.CoreV1().Pods(namespace).Get(pod.Name, metav1.GetOptions{})
+		if getErr == nil {
+			Logf("Status for pod: %+v", errPod)
+		}
 		return pod, fmt.Errorf("pod %q is not Running: %v", pod.Name, err)
 	}
 	// get fresh pod info

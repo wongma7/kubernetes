@@ -5,6 +5,7 @@ go_library(
     srcs = [
         "base.go",
         "driveroperations.go",
+        "multiattach.go",
         "provisioning.go",
         "snapshottable.go",
         "subpath.go",
