@@ -134,7 +134,7 @@ var (
 	ServeHostname       = Config{e2eRegistry, "serve-hostname", "1.1"}
 	TestWebserver       = Config{e2eRegistry, "test-webserver", "1.0"}
 	VolumeNFSServer     = Config{e2eRegistry, "volume/nfs", "1.0"}
-	VolumeISCSIServer   = Config{e2eRegistry, "volume/iscsi", "1.0"}
+	VolumeISCSIServer   = Config{e2eRegistry, "volume/iscsi", "1.1"}
 	VolumeGlusterServer = Config{e2eRegistry, "volume/gluster", "1.0"}
 	VolumeRBDServer     = Config{e2eRegistry, "volume/rbd", "1.0.1"}
 )

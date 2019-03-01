@@ -44,6 +44,8 @@ func InitMultiAttachTestSuite() TestSuite {
 			testPatterns: []testpatterns.TestPattern{
 				testpatterns.FsVolModeDynamicPV,
 				testpatterns.BlockVolModeDynamicPV,
+				testpatterns.FsVolModePreprovisionedPV,
+				testpatterns.BlockVolModePreprovisionedPV,
 				// Currently, multiple volumes are not generally available for pre-provisoined volume,
 				// because containerized storage servers, such as iSCSI and rbd, are just returning
 				// a static volume inside container, not actually creating a new volume per request.
@@ -76,15 +78,28 @@ func (t *multiAttachTestSuite) defineTests(driver TestDriver, pattern testpatter
 
 	BeforeEach(func() {
 		// Check preconditions.
-		if pattern.VolType != testpatterns.DynamicPV {
-			framework.Skipf("Suite %q does not support %v", t.tsInfo.name, pattern.VolType)
-		}
-		_, ok := driver.(DynamicPVTestDriver)
-		if !ok {
-			framework.Skipf("Driver %s doesn't support %v -- skipping", dInfo.Name, pattern.VolType)
-		}
-		if pattern.VolMode == v1.PersistentVolumeBlock && !dInfo.Capabilities[CapBlock] {
-			framework.Skipf("Driver %s doesn't support %v -- skipping", dInfo.Name, pattern.VolMode)
+		if dInfo.Name != "iscsi" {
+			if pattern.VolType != testpatterns.DynamicPV {
+				framework.Skipf("Suite %q does not support %v", t.tsInfo.name, pattern.VolType)
+			}
+			_, ok := driver.(DynamicPVTestDriver)
+			if !ok {
+				framework.Skipf("Driver %s doesn't support %v -- skipping", dInfo.Name, pattern.VolType)
+			}
+			if pattern.VolMode == v1.PersistentVolumeBlock && !dInfo.Capabilities[CapBlock] {
+				framework.Skipf("Driver %s doesn't support %v -- skipping", dInfo.Name, pattern.VolMode)
+			}
+		} else {
+			if pattern.VolType != testpatterns.PreprovisionedPV {
+				framework.Skipf("Suite %q does not support %v", t.tsInfo.name, pattern.VolType)
+			}
+			_, ok := driver.(PreprovisionedPVTestDriver)
+			if !ok {
+				framework.Failf("Expected driver %s to support %v", dInfo.Name, pattern.VolType)
+			}
+			if pattern.VolMode == v1.PersistentVolumeBlock && !dInfo.Capabilities[CapBlock] {
+				framework.Failf("Expected driver %s to support %v", dInfo.Name, pattern.VolMode)
+			}
 		}
 	})
 
@@ -260,5 +275,107 @@ func (t *multiAttachTestSuite) defineTests(driver TestDriver, pattern testpatter
 		// TODO: Delete one of the pod, then test read/write work well in ther other pod
 
 	})
+	testAttachOneVolumeToTwoPods := func(l local) {
+		var err error
 
+		l.resource2.sc = l.resource1.sc
+
+		pv := &v1.PersistentVolume{
+			ObjectMeta: metav1.ObjectMeta{
+				GenerateName: l.ns.Name,
+			},
+			Spec: l.resource1.pv.Spec,
+		}
+		pv.Spec.ClaimRef = nil
+		// iscsi-only
+		Expect(pv.Spec.PersistentVolumeSource.ISCSI).NotTo(BeNil())
+		pv.Spec.PersistentVolumeSource.ISCSI.Lun = 1
+		//
+		l.resource2.pv = pv
+
+		l.resource2.pvc = getClaim("1Gi", l.ns.Name)
+		l.resource2.pvc.Spec.StorageClassName = &l.resource2.sc.Name
+		l.resource2.pvc.Spec.VolumeMode = &l.resource2.pattern.VolMode
+		l.resource2.pvc.Spec.VolumeName = l.resource2.pv.Name
+
+		By("Creating pv and pvc")
+		l.resource2.pv, err = l.cs.CoreV1().PersistentVolumes().Create(l.resource2.pv)
+		Expect(err).NotTo(HaveOccurred())
+
+		l.resource2.pvc, err = l.cs.CoreV1().PersistentVolumeClaims(l.ns.Name).Create(l.resource2.pvc)
+		Expect(err).NotTo(HaveOccurred())
+
+		err = framework.WaitForPersistentVolumeClaimPhase(v1.ClaimBound, l.cs, l.resource2.pvc.Namespace, l.resource2.pvc.Name, framework.Poll, framework.ClaimProvisionTimeout)
+		Expect(err).NotTo(HaveOccurred())
+
+		l.resource2.pvc, err = l.cs.CoreV1().PersistentVolumeClaims(l.resource2.pvc.Namespace).Get(l.resource2.pvc.Name, metav1.GetOptions{})
+		Expect(err).NotTo(HaveOccurred())
+
+		l.resource2.pv, err = l.cs.CoreV1().PersistentVolumes().Get(l.resource2.pvc.Spec.VolumeName, metav1.GetOptions{})
+		Expect(err).NotTo(HaveOccurred())
+
+		// If node is not specified by l.config.ClientNodeName,
+		// decide the node to deploy both 1st pod and 2nd pod
+		// so that they will be deployed on the same node.
+		nodeName := l.config.ClientNodeName
+		if nodeName == "" {
+			nodes := framework.GetReadySchedulableNodesOrDie(l.cs)
+			nodeName = nodes.Items[rand.Intn(len(nodes.Items))].Name
+		}
+
+		By("Creating 1st pod with a volume")
+		pod1, err := framework.CreateSecPodWithNodeName(l.cs, l.ns.Name,
+			[]*v1.PersistentVolumeClaim{l.resource1.pvc},
+			false, "", false, false, framework.SELinuxLabel,
+			nil, nodeName, framework.PodStartTimeout)
+		defer func() {
+			framework.ExpectNoError(framework.DeletePodWithWait(f, l.cs, pod1))
+		}()
+		Expect(err).NotTo(HaveOccurred())
+
+		By("Creating 2nd pod with a different volume")
+		pod2, err := framework.CreateSecPodWithNodeName(l.cs, l.ns.Name,
+			[]*v1.PersistentVolumeClaim{l.resource2.pvc},
+			false, "", false, false, framework.SELinuxLabel,
+			nil, nodeName, framework.PodStartTimeout)
+		defer func() {
+			framework.ExpectNoError(framework.DeletePodWithWait(f, l.cs, pod2))
+		}()
+		Expect(err).NotTo(HaveOccurred())
+
+		By("Checking if the volume in 1st pod exists as expected volume mode")
+		utils.CheckVolumeModeOfPath(pod1, pattern.VolMode, "/mnt/volume1")
+
+		By("Checking if read/write to the volume in 1st pod works properly")
+		utils.CheckReadWriteToPath(pod1, pattern.VolMode, "/mnt/volume1")
+
+		By("Checking if the volume in 2nd pod exists as expected volume mode")
+		utils.CheckVolumeModeOfPath(pod2, pattern.VolMode, "/mnt/volume1")
+
+		By("Checking if read/write to the volume in 2nd pod works properly")
+		utils.CheckReadWriteToPath(pod2, pattern.VolMode, "/mnt/volume1")
+
+		// TODO: then 1=fs,2=block is different from 1=block,2=fs
+		By("Deleting the 1st pod")
+		err = framework.DeletePodWithWait(f, f.ClientSet, pod1)
+		Expect(err).ToNot(HaveOccurred(), "while deleting 1st pod %v", pod1)
+
+		By("Checking if read/write to the volume in 2nd pod works properly")
+		utils.CheckReadWriteToPath(pod2, pattern.VolMode, "/mnt/volume1")
+	}
+
+	if driver.GetDriverInfo().Name == "iscsi" {
+		// This tests below configuration:
+		// [pod1] [pod2]
+		// [   node1   ]
+		//   \      /     <- same volume mode
+		//   [volume1]
+		It("should attach iscsi volumes with same portal & iqn but different lun with the same volume mode to different pods on the same node and not logout when one pod is deleted", func() {
+			init()
+			defer cleanup()
+
+			l.resource2.pattern.VolMode = l.resource1.pattern.VolMode
+			testAttachOneVolumeToTwoPods(l)
+		})
+	}
 }

@@ -244,6 +244,18 @@ func (t *volumeModeTestSuite) defineTests(driver TestDriver, pattern testpattern
 				utils.CheckReadWriteToPath(pod, pattern.VolMode, "/mnt/volume1")
 			})
 			// TODO(mkimuram): Add more tests
+
+			// TODO move to multiattach
+			// When iscsi is detached...could log out...blah blah
+			if driver.GetDriverInfo().Name == "iscsi" {
+				// with different lun:
+				// 1 fs 1 block, delete fs should not delete block
+				// 1 fs 1 block, delete block should not delete fs
+				// 2 block, delete block should not delete block
+				// with same lun, we can safely assume kubelet reconciler is not insane (GetVolumeName). anyway it is covered by the other cases in multiattach
+				It("should create sc, pod, pv, and pvc, read/write to the pv, and delete all created resources", func() {
+				})
+			}
 		}
 	case testpatterns.DynamicPV:
 		if pattern.VolMode == v1.PersistentVolumeBlock && !isBlockSupported {
