@@ -1414,8 +1414,22 @@ func (c *Cloud) NodeAddresses(ctx context.Context, name types.NodeName) ([]v1.No
 			// but the AWS client masks all failures with the same error description.
 			klog.V(4).Info("Could not determine private DNS from AWS metadata.")
 		} else {
-			addresses = append(addresses, v1.NodeAddress{Type: v1.NodeInternalDNS, Address: internalDNS})
-			addresses = append(addresses, v1.NodeAddress{Type: v1.NodeHostName, Address: internalDNS})
+			// If a DHCP option set is configured for a VPC and it has multiple domain names, GetMetadata
+			// returns a string containing first the hostname followed by additional domain names,
+			// space-separated. For example, if the DHCP option set has:
+			// domain-name = us-west-2.compute.internal a.a b.b c.c d.d;
+			// $ curl http://169.254.169.254/latest/meta-data/local-hostname
+			// ip-192-168-111-51.us-west-2.compute.internal a.a b.b c.c d.d
+			localHostnames := strings.Fields(internalDNS)
+			hostname := localHostnames[0]
+			addresses = append(addresses, v1.NodeAddress{Type: v1.NodeHostName, Address: hostname})
+			addresses = append(addresses, v1.NodeAddress{Type: v1.NodeInternalDNS, Address: hostname})
+
+			privateAddress := strings.Split(hostname, ".")[0]
+			for _, h := range localHostnames[1:] {
+				internalDNSAddress := privateAddress + "." + h
+				addresses = append(addresses, v1.NodeAddress{Type: v1.NodeInternalDNS, Address: internalDNSAddress})
+			}
 		}
 
 		externalDNS, err := c.metadata.GetMetadata("public-hostname")
