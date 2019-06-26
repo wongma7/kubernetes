@@ -24,6 +24,8 @@ import (
 	"net"
 	"sort"
 
+	"k8s.io/klog"
+
 	"github.com/prometheus/client_golang/prometheus"
 
 	certificates "k8s.io/api/certificates/v1beta1"
@@ -64,6 +66,8 @@ func NewKubeletServerCertificateManager(kubeClient clientset.Interface, kubeCfg 
 
 	getTemplate := func() *x509.CertificateRequest {
 		hostnames, ips := addressesToHostnamesAndIPs(getAddresses())
+		klog.V(4).Info("ASDF hostnames: %v", hostnames)
+		klog.V(4).Info("ASDF ips: %v", ips)
 		// don't return a template if we have no addresses to request for
 		if len(hostnames) == 0 && len(ips) == 0 {
 			return nil

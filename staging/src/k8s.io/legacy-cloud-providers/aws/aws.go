@@ -1425,11 +1425,13 @@ func (c *Cloud) NodeAddresses(ctx context.Context, name types.NodeName) ([]v1.No
 			addresses = append(addresses, v1.NodeAddress{Type: v1.NodeHostName, Address: hostname})
 			addresses = append(addresses, v1.NodeAddress{Type: v1.NodeInternalDNS, Address: hostname})
 
+			klog.V(4).Info("ASDF localHostnames: %v", localHostnames)
 			privateAddress := strings.Split(hostname, ".")[0]
 			for _, h := range localHostnames[1:] {
 				internalDNSAddress := privateAddress + "." + h
 				addresses = append(addresses, v1.NodeAddress{Type: v1.NodeInternalDNS, Address: internalDNSAddress})
 			}
+			klog.V(4).Info("ASDF addresses: %v", addresses)
 		}
 
 		externalDNS, err := c.metadata.GetMetadata("public-hostname")

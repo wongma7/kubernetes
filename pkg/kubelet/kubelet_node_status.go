@@ -452,6 +452,7 @@ func (kl *Kubelet) tryUpdateNodeStatus(tryNumber int) error {
 		}
 	}
 
+	klog.V(2).Infof("node status addresses %v", node.Status.Addresses)
 	// Patch the current status on the API server
 	updatedNode, _, err := nodeutil.PatchNodeStatus(kl.heartbeatClient.CoreV1(), types.NodeName(kl.nodeName), originalNode, node)
 	if err != nil {
@@ -459,6 +460,7 @@ func (kl *Kubelet) tryUpdateNodeStatus(tryNumber int) error {
 	}
 	kl.lastStatusReportTime = now
 	kl.setLastObservedNodeAddresses(updatedNode.Status.Addresses)
+	klog.V(2).Infof("updated node status addresses %v", updatedNode.Status.Addresses)
 	// If update finishes successfully, mark the volumeInUse as reportedInUse to indicate
 	// those volumes are already updated in the node's status
 	kl.volumeManager.MarkVolumesAsReportedInUse(updatedNode.Status.VolumesInUse)

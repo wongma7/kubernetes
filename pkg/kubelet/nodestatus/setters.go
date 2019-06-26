@@ -85,6 +85,8 @@ func NodeAddress(nodeIP net.IP, // typically Kubelet.nodeIP
 		}
 		if cloud != nil {
 			nodeAddresses, err := nodeAddressesFunc()
+			klog.V(2).Infof("QWER nodeAddresses %v", nodeAddresses)
+			klog.V(2).Infof("QWER nodeIP %v", nodeIP.String())
 			if err != nil {
 				return err
 			}
@@ -106,6 +108,7 @@ func NodeAddress(nodeIP net.IP, // typically Kubelet.nodeIP
 					}
 
 					enforcedNodeAddresses = append(enforcedNodeAddresses, v1.NodeAddress{Type: v1.NodeHostName, Address: hostname})
+					klog.V(2).Infof("QWER enforcedNodeAddresses %v", enforcedNodeAddresses)
 					node.Status.Addresses = enforcedNodeAddresses
 					return nil
 				}

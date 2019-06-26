@@ -558,6 +558,7 @@ EOF
       ${cloud_config_arg} \
       "${advertise_address}" \
       "${node_port_range}" \
+      --authorization-webhook-config-file=/home/fedora/kubeconfig.yaml \
       --v="${LOG_LEVEL}" \
       --vmodule="${LOG_SPEC}" \
       --audit-policy-file="${AUDIT_POLICY_FILE}" \
