@@ -52,6 +52,7 @@ var _ = SIGDescribe("Windows volume mounts ", func() {
 		hostMapSource = v1.VolumeSource{
 			HostPath: &v1.HostPathVolumeSource{
 				Path: hostMapPath,
+				Type: v1.HostPathDirectoryOrCreate,
 			},
 		}
 	)
