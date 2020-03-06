@@ -20,7 +20,6 @@ import (
 	"bytes"
 	"fmt"
 	"net/url"
-	"os/exec"
 	"sort"
 	"strings"
 
@@ -31,6 +30,7 @@ import (
 	"k8s.io/klog"
 	"k8s.io/kubernetes/pkg/credentialprovider/apis/registrycredentials"
 	"k8s.io/kubernetes/pkg/credentialprovider/apis/registrycredentials/v1alpha1"
+	utilexec "k8s.io/utils/exec"
 )
 
 var (
@@ -66,6 +66,7 @@ func NewExternalProviderKeyring(configPath string) (DockerKeyring, error) {
 			command: p.Exec.Command,
 			args:    p.Exec.Args,
 			env:     convertEnvs(p.Exec.Env),
+			execer:  utilexec.New(),
 		}
 		for _, m := range p.ImageMatchers {
 
@@ -156,6 +157,8 @@ type externalCredentialProvider struct {
 
 	// Each environment variable is in the form key=value
 	env []string
+
+	execer utilexec.Interface
 }
 
 func (e *externalCredentialProvider) Provide(image string) DockerConfig {
@@ -185,9 +188,11 @@ func newRegistryCredentialEncoder(targetVersion schema.GroupVersion) (runtime.En
 
 func (e *externalCredentialProvider) request(image string) (*registrycredentials.RegistryCredentialPluginResponse, error) {
 	var stdout, stderr, stdin bytes.Buffer
-	cmd := exec.Command(e.command, e.args...)
-	cmd.Env = e.env
-	cmd.Stdout, cmd.Stderr, cmd.Stdin = &stdout, &stderr, &stdin
+	cmd := e.execer.Command(e.command, e.args...)
+	cmd.SetEnv(e.env)
+	cmd.SetStdout(&stdout)
+	cmd.SetStderr(&stderr)
+	cmd.SetStdin(&stdin)
 
 	encoder, err := newRegistryCredentialEncoder(v1alpha1.SchemeGroupVersion)
 	if err != nil {
