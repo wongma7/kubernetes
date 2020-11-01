@@ -163,8 +163,14 @@ kube::version::ldflags() {
       "-X 'k8s.io/component-base/version.${key}=${val}'"
     )
   }
+  DATE=date
+  if which gdate &>/dev/null; then
+      DATE=gdate
+  elif which gnudate &>/dev/null; then
+      DATE=gnudate
+  fi
 
-  add_ldflag "buildDate" "$(date ${SOURCE_DATE_EPOCH:+"--date=@${SOURCE_DATE_EPOCH}"} -u +'%Y-%m-%dT%H:%M:%SZ')"
+  add_ldflag "buildDate" "$(${DATE} ${SOURCE_DATE_EPOCH:+"--date=@${SOURCE_DATE_EPOCH}"} -u +'%Y-%m-%dT%H:%M:%SZ')"
   if [[ -n ${KUBE_GIT_COMMIT-} ]]; then
     add_ldflag "gitCommit" "${KUBE_GIT_COMMIT}"
     add_ldflag "gitTreeState" "${KUBE_GIT_TREE_STATE}"
