@@ -129,7 +129,7 @@ func createCgroupManager(name string) (cgroups.Manager, error) {
 			SkipDevices: true,
 		},
 	}
-	return cgroupfs.NewManager(cg, nil, false), nil
+	return cgroupfs.NewManager(cg, nil)
 }
 
 // getMemoryCapacity returns the memory capacity on the machine in bytes.
