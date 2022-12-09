@@ -149,7 +149,12 @@ func (s *store) Get(ctx context.Context, key string, opts storage.GetOptions, ou
 		return storage.NewInternalError(err.Error())
 	}
 
-	return decode(s.codec, s.versioner, data, out, kv.ModRevision)
+	err = decode(s.codec, s.versioner, data, out, kv.ModRevision)
+	if err != nil {
+		recordDecodeError(s.groupResourceString, preparedKey)
+		return err
+	}
+	return nil
 }
 
 // Create implements storage.Interface.Create.
@@ -196,7 +201,11 @@ func (s *store) Create(ctx context.Context, key string, obj, out runtime.Object,
 
 	if out != nil {
 		putResp := txnResp.Responses[0].GetResponsePut()
-		return decode(s.codec, s.versioner, data, out, putResp.Header.Revision)
+		err = decode(s.codec, s.versioner, data, out, putResp.Header.Revision)
+		if err != nil {
+			recordDecodeError(s.groupResourceString, preparedKey)
+			return err
+		}
 	}
 	return nil
 }
@@ -318,7 +327,12 @@ func (s *store) conditionalDelete(
 			origStateIsCurrent = true
 			continue
 		}
-		return decode(s.codec, s.versioner, origState.data, out, origState.rev)
+		err = decode(s.codec, s.versioner, origState.data, out, origState.rev)
+		if err != nil {
+			recordDecodeError(s.groupResourceString, key)
+			return err
+		}
+		return nil
 	}
 }
 
@@ -429,7 +443,12 @@ func (s *store) GuaranteedUpdate(
 			}
 			// recheck that the data from etcd is not stale before short-circuiting a write
 			if !origState.stale {
-				return decode(s.codec, s.versioner, origState.data, out, origState.rev)
+				err = decode(s.codec, s.versioner, origState.data, out, origState.rev)
+				if err != nil {
+					recordDecodeError(s.groupResourceString, preparedKey)
+					return err
+				}
+				return nil
 			}
 		}
 
@@ -527,6 +546,7 @@ func (s *store) GetToList(ctx context.Context, key string, listOpts storage.List
 			return storage.NewInternalError(err.Error())
 		}
 		if err := appendListItem(v, data, uint64(getResp.Kvs[0].ModRevision), pred, s.codec, s.versioner, newItemFunc); err != nil {
+			recordDecodeError(s.groupResourceString, preparedKey)
 			return err
 		}
 	}
@@ -937,6 +957,7 @@ func (s *store) getState(getResp *clientv3.GetResponse, key string, v reflect.Va
 		state.data = data
 		state.stale = stale
 		if err := decode(s.codec, s.versioner, state.data, state.obj, state.rev); err != nil {
+			recordDecodeError(s.groupResourceString, key)
 			return nil, err
 		}
 	}
@@ -1073,6 +1094,12 @@ func appendListItem(v reflect.Value, data []byte, rev uint64, pred storage.Selec
 		v.Set(reflect.Append(v, reflect.ValueOf(obj).Elem()))
 	}
 	return nil
+}
+
+// recordDecodeError record decode error split by object type.
+func recordDecodeError(resource string, key string) {
+	metrics.RecordDecodeError(resource)
+	klog.V(4).Infof("Decoding %s \"%s\" failed", resource, key)
 }
 
 func notFound(key string) clientv3.Cmp {
