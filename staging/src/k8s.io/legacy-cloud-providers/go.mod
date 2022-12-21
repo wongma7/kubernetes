@@ -12,7 +12,7 @@ require (
 	github.com/Azure/go-autorest/autorest/mocks v0.4.1
 	github.com/Azure/go-autorest/autorest/to v0.4.0
 	github.com/GoogleCloudPlatform/k8s-cloud-provider v1.16.1-0.20210702024009-ea6160c1d0e3
-	github.com/aws/aws-sdk-go v1.38.49
+	github.com/aws/aws-sdk-go v1.44.216
 	github.com/blang/semver v3.5.1+incompatible
 	github.com/golang/mock v1.5.0
 	github.com/google/go-cmp v0.5.5
