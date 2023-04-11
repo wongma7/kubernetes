@@ -18,6 +18,7 @@ package filters
 
 import (
 	"context"
+	"k8s.io/apiserver/pkg/authorization/authorizer"
 	"strings"
 	"time"
 
@@ -38,6 +39,10 @@ const (
 	successLabel = "success"
 	failureLabel = "failure"
 	errorLabel   = "error"
+
+	allowedLabel   = "allowed"
+	forbiddenLabel = "forbidden"
+	noOpinionLabel = "no-opinion"
 )
 
 var (
@@ -68,15 +73,56 @@ var (
 		},
 		[]string{"result"},
 	)
+
+	authorizationAttemptsCounter = metrics.NewCounterVec(
+		&metrics.CounterOpts{
+			Name:           "authorization_attempts_total",
+			Help:           "Counter of authorization attempts broken down by result. It can be either 'allowed', 'forbidden', 'no-opinion' or 'error'.",
+			StabilityLevel: metrics.ALPHA,
+		},
+		[]string{"result"},
+	)
+
+	authorizationLatency = metrics.NewHistogramVec(
+		&metrics.HistogramOpts{
+			Name:           "authorization_duration_seconds",
+			Help:           "Authorization duration in seconds broken out by result.",
+			Buckets:        metrics.ExponentialBuckets(0.001, 2, 15),
+			StabilityLevel: metrics.ALPHA,
+		},
+		[]string{"result"},
+	)
 )
 
 func init() {
 	legacyregistry.MustRegister(authenticatedUserCounter)
 	legacyregistry.MustRegister(authenticatedAttemptsCounter)
 	legacyregistry.MustRegister(authenticationLatency)
+	legacyregistry.MustRegister(authorizationAttemptsCounter)
+	legacyregistry.MustRegister(authorizationLatency)
 }
 
-func recordAuthMetrics(ctx context.Context, resp *authenticator.Response, ok bool, err error, apiAudiences authenticator.Audiences, authStart time.Time, authFinish time.Time) {
+func recordAuthorizationMetrics(ctx context.Context, authorized authorizer.Decision, err error, authStart time.Time, authFinish time.Time) {
+	var resultLabel string
+
+	switch {
+	//Follow the behavior in withAuthorization, even encounter evaluation errors and still allow the request
+	//Will not judge whether there is an error
+	case authorized == authorizer.DecisionAllow:
+		resultLabel = allowedLabel
+	case err != nil:
+		resultLabel = errorLabel
+	case authorized == authorizer.DecisionDeny:
+		resultLabel = forbiddenLabel
+	case authorized == authorizer.DecisionNoOpinion:
+		resultLabel = noOpinionLabel
+	}
+
+	authorizationAttemptsCounter.WithContext(ctx).WithLabelValues(resultLabel).Inc()
+	authorizationLatency.WithContext(ctx).WithLabelValues(resultLabel).Observe(authFinish.Sub(authStart).Seconds())
+}
+
+func recordAuthenticationMetrics(ctx context.Context, resp *authenticator.Response, ok bool, err error, apiAudiences authenticator.Audiences, authStart time.Time, authFinish time.Time) {
 	var resultLabel string
 
 	switch {
